@@ -250,18 +250,20 @@ export class GithubService {
         ),
       );
       console.log(tokenResponse);
-      const installationAccessToken = tokenResponse.data.token;
+      const githubInstallationAccessToken = tokenResponse.data.token;
 
-      if (!installationAccessToken) {
+      if (!githubInstallationAccessToken) {
         throw new Error('Failed to retrieve installation access token');
       }
-      const response = await this.getInstallationRepos(installationAccessToken);
+      const response = await this.getInstallationRepos(
+        githubInstallationAccessToken,
+      );
       // const installInfo = await this.getInstallationInfos(
       //   installationId,
-      //   installationAccessToken,
+      //   githubInstallationAccessToken,
       // );
       // console.log(installInfo);
-      return { repos: response, installationAccessToken };
+      return { repos: response, githubInstallationAccessToken };
     } catch (error) {
       console.error('Error creating app access token:', error.message);
       throw new Error('Failed to create app access token: ' + error.message);
@@ -269,13 +271,13 @@ export class GithubService {
   }
   public async getInstallationInfos(
     installationId: string,
-    installationAccessToken: string,
+    githubInstallationAccessToken: string,
   ) {
     try {
       const reposResponse = await firstValueFrom(
         this.httpService.get(`https://api.github.com/app/installations`, {
           headers: {
-            Authorization: `Bearer ${installationAccessToken}`,
+            Authorization: `Bearer ${githubInstallationAccessToken}`,
             Accept: 'application/vnd.github.v3+json',
           },
         }),
@@ -287,14 +289,14 @@ export class GithubService {
       throw new Error('Failed to fetch installation infos');
     }
   }
-  public async getInstallationRepos(installationAccessToken: string) {
+  public async getInstallationRepos(githubInstallationAccessToken: string) {
     try {
       const reposResponse = await firstValueFrom(
         this.httpService.get(
           'https://api.github.com/installation/repositories',
           {
             headers: {
-              Authorization: `Bearer ${installationAccessToken}`,
+              Authorization: `Bearer ${githubInstallationAccessToken}`,
               Accept: 'application/vnd.github.v3+json',
             },
           },

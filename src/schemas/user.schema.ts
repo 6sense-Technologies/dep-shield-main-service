@@ -21,7 +21,7 @@ export class User {
   githubAccessToken: string;
 
   @Prop({ required: false, default: 'N/A' })
-  installationAccessToken: string;
+  githubInstallationAccessToken: string;
 
   @Prop({ required: false, default: false })
   isVerified: boolean;
