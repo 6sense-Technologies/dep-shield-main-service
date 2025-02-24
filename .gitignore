@@ -131,3 +131,4 @@ dist
 .pnp.*
 pkey.pem
 private-key.pem
+.vercel
