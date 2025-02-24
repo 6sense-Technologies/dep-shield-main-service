@@ -7,12 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import {
-  SignupDto,
-  LoginDto,
-  GithubTokenDTO,
-  VerifyEmailDto,
-} from './dto/auth.dto';
+import { SignupDto, LoginDto, VerifyEmailDto } from './dto/auth.dto';
 import { User, UserDocument } from '../../schemas/user.schema'; // Adjust the path as needed
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -161,47 +156,47 @@ export class AuthService {
     return { isValidated: true };
   }
 
-  async githubLogin(dto: GithubTokenDTO) {
-    const response = await this.githubService.verifyAccessToken(
-      dto.accessToken,
-    );
-    if (!response) {
-      throw new UnauthorizedException('Invalid access token');
-    }
-    // await this.githubService.getAllRepos(dto.accessToken);
-    const data = await this.githubService.getUserEmails(dto.accessToken);
-    if (data) {
-      let user = await this.userModel
-        .findOne({ email: data.email, loginType: 'github' })
-        .exec();
+  // async githubLogin(dto: GithubTokenDTO) {
+  //   const response = await this.githubService.verifyAccessToken(
+  //     dto.accessToken,
+  //   );
+  //   if (!response) {
+  //     throw new UnauthorizedException('Invalid access token');
+  //   }
+  //   // await this.githubService.getAllRepos(dto.accessToken);
+  //   const data = await this.githubService.getUserEmails(dto.accessToken);
+  //   if (data) {
+  //     let user = await this.userModel
+  //       .findOne({ email: data.email, loginType: 'github' })
+  //       .exec();
 
-      if (!user) {
-        user = await this.userModel.create({
-          email: data.email,
-          name: response.data.login,
-          password: 'null',
-          loginType: 'github',
-          githubAccessToken: dto.accessToken,
-        });
-      } else {
-        user.githubAccessToken = dto.accessToken;
-        await user.save();
-      }
-      const userId = user.id;
-      const { accessToken, refreshToken } = this.generateTokens(
-        userId,
-        data.email,
-      );
-      return {
-        accessToken,
-        refreshToken,
-        userInfo: this.sanitizeUser(user),
-      };
-    }
-    // const repo = await this.githubService.readPackageJson(
-    //   dto.accessToken,
-    //   allRepos[0].repo,
-    // );
-    // console.log(repo);
-  }
+  //     if (!user) {
+  //       user = await this.userModel.create({
+  //         email: data.email,
+  //         name: response.data.login,
+  //         password: 'null',
+  //         loginType: 'github',
+  //         githubAccessToken: dto.accessToken,
+  //       });
+  //     } else {
+  //       user.githubAccessToken = dto.accessToken;
+  //       await user.save();
+  //     }
+  //     const userId = user.id;
+  //     const { accessToken, refreshToken } = this.generateTokens(
+  //       userId,
+  //       data.email,
+  //     );
+  //     return {
+  //       accessToken,
+  //       refreshToken,
+  //       userInfo: this.sanitizeUser(user),
+  //     };
+  //   }
+  //   // const repo = await this.githubService.readPackageJson(
+  //   //   dto.accessToken,
+  //   //   allRepos[0].repo,
+  //   // );
+  //   // console.log(repo);
+  // }
 }

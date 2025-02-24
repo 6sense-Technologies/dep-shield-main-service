@@ -1,12 +1,6 @@
 import { Controller, Post, Body, Get, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import {
-  SignupDto,
-  LoginDto,
-  GithubTokenDTO,
-  VerifyEmailDto,
-  EmailDTO,
-} from './dto/auth.dto';
+import { SignupDto, LoginDto, VerifyEmailDto, EmailDTO } from './dto/auth.dto';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AccessTokenGuard } from './guards/accessToken.guard';
 // import { RefreshTokenGuard } from './guards/refreshToken.guard';
@@ -47,10 +41,10 @@ export class AuthController {
   //   return this.authService.socialLogin(dto);
   // }
 
-  @Post('github-login')
-  githubLogin(@Body() dto: GithubTokenDTO) {
-    return this.authService.githubLogin(dto);
-  }
+  // @Post('github-login')
+  // githubLogin(@Body() dto: GithubTokenDTO) {
+  //   return this.authService.githubLogin(dto);
+  // }
 
   @UseGuards(AccessTokenGuard)
   @ApiBearerAuth()
