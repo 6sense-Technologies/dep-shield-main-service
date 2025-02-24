@@ -12,8 +12,8 @@ async function bootstrap() {
 
   // Swagger setup
   const config = new DocumentBuilder()
-    .setTitle('NestJS API')
-    .setDescription('API documentation for NestJS application')
+    .setTitle('Dep Shield API')
+    .setDescription('API documentation for Dep Shield application')
     .setVersion('1.0')
     .addBearerAuth() // Add Bearer token authentication
     .build();
