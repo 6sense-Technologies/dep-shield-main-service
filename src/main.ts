@@ -6,16 +6,9 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  app.enableCors({
-    origin: ['http://localhost:3000', 'https://dep-shield-test.vercel.app'],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
-    credentials: true, // Allow cookies and authorization headers
-  });
-
   // Use validation pipes
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.enableCors();
 
   // Swagger setup
   const config = new DocumentBuilder()
