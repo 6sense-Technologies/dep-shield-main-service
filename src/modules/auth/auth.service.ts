@@ -60,8 +60,11 @@ export class AuthService {
     const user = await this.userModel
       .findOne({ emailAddress: dto.emailAddress, loginType: 'credential' })
       .exec();
-    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
-      throw new NotFoundException('Invalid credentials');
+    if (!user) {
+      throw new NotFoundException('No user found');
+    }
+    if (!(await bcrypt.compare(dto.password, user.password))) {
+      throw new BadRequestException('Invalid credentials');
     }
 
     const { accessToken, refreshToken } = this.generateTokens(
