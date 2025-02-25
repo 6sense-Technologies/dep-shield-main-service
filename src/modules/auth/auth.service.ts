@@ -151,7 +151,7 @@ export class AuthService {
       throw new BadRequestException('Token Expired');
     }
     const user = await this.userModel.findOne({
-      email: verifyEmailDTO.emailAddress,
+      emailAddress: verifyEmailDTO.emailAddress,
     });
     user.isVerified = true;
     await user.save();
