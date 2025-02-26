@@ -11,7 +11,6 @@ import { SignupDto, LoginDto, VerifyEmailDto } from './dto/auth.dto';
 import { User, UserDocument } from '../../schemas/user.schema'; // Adjust the path as needed
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { GithubService } from '../github/github.service';
 import { EmailService } from '../email/email.service';
 import { OTPSecret, OTPSecretDocument } from 'src/schemas/OTPSecret.schema';
 
@@ -19,7 +18,6 @@ import { OTPSecret, OTPSecretDocument } from 'src/schemas/OTPSecret.schema';
 export class AuthService {
   constructor(
     private jwtService: JwtService,
-    private githubService: GithubService,
     private emailService: EmailService,
     @InjectModel(User.name) private userModel: Model<UserDocument>, // Inject Mongoose User model
     @InjectModel(OTPSecret.name)
