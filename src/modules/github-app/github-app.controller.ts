@@ -14,7 +14,7 @@ export class GithubAppController {
     @Query('installation_id') installationId: string,
     @Req() req: Request,
   ) {
-    return await this.githubAppService.createAppAccessToken(
+    return await this.githubAppService.installApp(
       authCode,
       installationId,
       req['user'].userId,
@@ -26,5 +26,12 @@ export class GithubAppController {
   @Get('check-status')
   async checkStatus(@Req() req: Request) {
     return await this.githubAppService.checkStatus(req['user'].userId);
+  }
+
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @Get('disconnect')
+  async disConnect(@Req() req: Request) {
+    return await this.githubAppService.deleteGithubApp(req['user'].userId);
   }
 }

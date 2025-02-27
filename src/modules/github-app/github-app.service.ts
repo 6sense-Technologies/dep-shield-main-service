@@ -1,12 +1,11 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import { GithubApp, GithubAppDocument } from 'src/schemas/GithubApp.schema';
 import { User, UserDocument } from 'src/schemas/user.schema';
 import * as jwt from 'jsonwebtoken';
-import * as fs from 'fs';
 @Injectable()
 export class GithubAppService {
   constructor(
@@ -23,16 +22,17 @@ export class GithubAppService {
       iss: process.env.GITHUB_APP_ID, // GitHub App ID
     };
 
-    // Load the private key (ensure the key is correctly formatted)
-    const privateKey = fs.readFileSync('./pkey.pem', 'utf8');
+    const privateKey = Buffer.from(
+      process.env.GITHUB_PRIVATE_KEY,
+      'base64',
+    ).toString('utf8');
 
-    // Sign and return the JWT
     return jwt.sign(payload, privateKey, {
       algorithm: 'RS256',
     });
   }
 
-  public async createAppAccessToken(
+  public async installApp(
     authCode: string,
     installationId: string,
     userId: string,
@@ -41,17 +41,12 @@ export class GithubAppService {
       console.log(
         `Invoke with authCode: ${authCode}, InstallationId: ${installationId}, from User-${userId}`,
       );
-      const githubApp = await this.githubApp.findOne({ user: userId }).exec();
-      let tempInstallationId = installationId;
-      if (githubApp) {
-        tempInstallationId = githubApp.installationId;
-      }
 
       const jwt = this.generateJwt();
-      // console.log(jwt);
+      console.log(jwt);
       const tokenResponse = await firstValueFrom(
         this.httpService.post(
-          `https://api.github.com/app/installations/${tempInstallationId}/access_tokens`,
+          `https://api.github.com/app/installations/${installationId}/access_tokens`,
           {}, // Empty body
           {
             headers: {
@@ -67,32 +62,38 @@ export class GithubAppService {
       if (!githubInstallationAccessToken) {
         throw new Error('Failed to retrieve installation access token');
       }
-      const user = await this.userModel.findOne({ user: userId });
-      await this.githubApp.updateOne(
-        { user: user }, // Query: Find by user
+      const user = await this.userModel.findById(userId);
+      const githubAppInfo = await this.githubApp.updateOne(
+        { user: user.id, installationId: installationId }, // Query: Find by user
         {
-          installationId: tempInstallationId,
+          installationId: installationId,
           appInstallationAccessToken: githubInstallationAccessToken,
         },
         { upsert: true }, // Create if not exists, update if exists
       );
 
-      return {
-        githubInstallationAccessToken,
-      };
+      return githubAppInfo;
     } catch (error) {
       console.error('Error creating app access token:', error.message);
-      throw new Error('Failed to create app access token: ' + error.message);
+      throw new BadRequestException('Github App Installation failed');
     }
   }
   public async checkStatus(userId: string) {
     const githubApp = await this.githubApp.findOne({
       user: new Types.ObjectId(userId),
+      isDeleted: false,
     });
     if (!githubApp) {
       return { isConnected: false };
     } else {
       return { isConnected: true };
     }
+  }
+  public async deleteGithubApp(userId: string) {
+    const deleted = await this.githubApp.updateMany(
+      { user: new Types.ObjectId(userId) },
+      { $set: { isDeleted: true } },
+    );
+    return deleted;
   }
 }

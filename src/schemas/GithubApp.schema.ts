@@ -9,10 +9,10 @@ export class GithubApp extends Document {
   @Prop({ type: 'ObjectId', ref: 'User', required: true }) // Reference to the User schema
   user: User;
 
-  @Prop({ required: true, unique: true }) // installation access token
+  @Prop({ required: true }) // installation access token
   appInstallationAccessToken: string;
 
-  @Prop({ required: true, unique: true }) // installation id
+  @Prop({ required: true }) // installation id
   installationId: string;
 
   @Prop({ required: false, default: false })
