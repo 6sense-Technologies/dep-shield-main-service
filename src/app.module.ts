@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { SchemasModule } from './schemas/schemas.module';
 import { EmailModule } from './modules/email/email.module';
 import { EmailService } from './modules/email/email.service';
+import { GithubAppModule } from './modules/github-app/github-app.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { EmailService } from './modules/email/email.service';
     AuthModule,
     GithubModule,
     SchemasModule,
-    EmailModule, // Import the SchemasModule here
+    EmailModule,
+    GithubAppModule, // Import the SchemasModule here
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],
