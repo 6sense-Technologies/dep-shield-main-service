@@ -31,6 +31,24 @@ export class GithubAppService {
       algorithm: 'RS256',
     });
   }
+  public async createInstallationToken(installationId: string) {
+    const jwt = this.generateJwt();
+    const tokenResponse = await firstValueFrom(
+      this.httpService.post(
+        `https://api.github.com/app/installations/${installationId}/access_tokens`,
+        {}, // Empty body
+        {
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        },
+      ),
+    );
+    const githubInstallationAccessToken = tokenResponse.data.token;
+    console.log(`Installation access token ${githubInstallationAccessToken}`);
+    return githubInstallationAccessToken;
+  }
 
   public async installApp(
     authCode: string,
@@ -56,7 +74,6 @@ export class GithubAppService {
           },
         ),
       );
-
       const githubInstallationAccessToken = tokenResponse.data.token;
 
       if (!githubInstallationAccessToken) {
@@ -69,7 +86,7 @@ export class GithubAppService {
           installationId: installationId,
           appInstallationAccessToken: githubInstallationAccessToken,
         },
-        { upsert: true }, // Create if not exists, update if exists
+        { upsert: true, new: true }, // Create if not exists, update if exists
       );
 
       return githubAppInfo;

@@ -8,5 +8,6 @@ import { SchemasModule } from 'src/schemas/schemas.module';
   imports: [HttpModule, SchemasModule],
   providers: [GithubAppService],
   controllers: [GithubAppController],
+  exports: [GithubAppService],
 })
 export class GithubAppModule {}
