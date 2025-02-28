@@ -32,22 +32,26 @@ export class GithubAppService {
     });
   }
   public async createInstallationToken(installationId: string) {
-    const jwt = this.generateJwt();
-    const tokenResponse = await firstValueFrom(
-      this.httpService.post(
-        `https://api.github.com/app/installations/${installationId}/access_tokens`,
-        {}, // Empty body
-        {
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-            Accept: 'application/vnd.github.v3+json',
+    try {
+      const jwt = this.generateJwt();
+      const tokenResponse = await firstValueFrom(
+        this.httpService.post(
+          `https://api.github.com/app/installations/${installationId}/access_tokens`,
+          {}, // Empty body
+          {
+            headers: {
+              Authorization: `Bearer ${jwt}`,
+              Accept: 'application/vnd.github.v3+json',
+            },
           },
-        },
-      ),
-    );
-    const githubInstallationAccessToken = tokenResponse.data.token;
-    console.log(`Installation access token ${githubInstallationAccessToken}`);
-    return githubInstallationAccessToken;
+        ),
+      );
+      const githubInstallationAccessToken = tokenResponse.data.token;
+      console.log(`Installation access token ${githubInstallationAccessToken}`);
+      return githubInstallationAccessToken;
+    } catch {
+      console.log(`Error creating app installation token`);
+    }
   }
 
   public async installApp(
@@ -85,6 +89,7 @@ export class GithubAppService {
         {
           installationId: installationId,
           appInstallationAccessToken: githubInstallationAccessToken,
+          isDeleted: false,
         },
         { upsert: true, new: true }, // Create if not exists, update if exists
       );
@@ -107,10 +112,45 @@ export class GithubAppService {
     }
   }
   public async deleteGithubApp(userId: string) {
+    // console.log(userId);
+    const githubApps = await this.githubApp.find({
+      user: new Types.ObjectId(userId),
+      isDeleted: false,
+    });
+    // console.log(githubApps);
+    for (let i = 0; i < githubApps.length; i += 1) {
+      const token = this.generateJwt();
+      if (!token) continue;
+      console.log(`JWT Token generated: ${token}`);
+
+      try {
+        const response = await firstValueFrom(
+          this.httpService.delete(
+            `https://api.github.com/app/installations/${githubApps[i].installationId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github+json',
+              },
+            },
+          ),
+        );
+        if (response.status === 204) {
+          console.log(`Uninstalled app ${githubApps[i].installationId}`);
+        } else {
+          console.log(
+            `Uninstall unacknowledged from github ${githubApps[i].installationId}`,
+          );
+        }
+      } catch {
+        console.log(`Error uninstalling app ${githubApps[i].installationId}`);
+      }
+    }
     const deleted = await this.githubApp.updateMany(
       { user: new Types.ObjectId(userId) },
       { $set: { isDeleted: true } },
     );
+
     return deleted;
   }
 }
