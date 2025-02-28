@@ -17,7 +17,7 @@ export class User {
   @Prop({ required: true, default: 'credential' })
   loginType: string;
 
-  @Prop({ required: true, default: '' })
+  @Prop({ required: false, default: '' })
   avatarUrl: string;
 
   @Prop({ required: false, default: false })
