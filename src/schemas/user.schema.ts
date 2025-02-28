@@ -17,14 +17,14 @@ export class User {
   @Prop({ required: true, default: 'credential' })
   loginType: string;
 
-  @Prop({ required: false, default: 'N/A' })
-  githubAccessToken: string;
-
-  @Prop({ required: false, default: 'N/A' })
-  githubInstallationAccessToken: string;
+  @Prop({ required: true, default: '' })
+  avatarUrl: string;
 
   @Prop({ required: false, default: false })
   isVerified: boolean;
+
+  @Prop({ required: false, default: false })
+  isDeleted: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

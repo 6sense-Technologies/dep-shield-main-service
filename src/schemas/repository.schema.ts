@@ -2,10 +2,10 @@ import { Document } from 'mongoose';
 import { Prop, SchemaFactory, Schema as NestSchema } from '@nestjs/mongoose';
 import { User } from './user.schema'; // Import the User schema
 
-export type GithubUrlDocument = GithubUrl & Document;
+export type RepositoryDocument = Repository & Document;
 
 @NestSchema({ timestamps: true })
-export class GithubUrl {
+export class Repository {
   @Prop({ type: 'ObjectId', ref: 'User', required: true }) // Reference to the User schema
   user: User;
 
@@ -16,4 +16,4 @@ export class GithubUrl {
   isSelected: boolean;
 }
 
-export const GithubUrlSchema = SchemaFactory.createForClass(GithubUrl);
+export const RepositorySchema = SchemaFactory.createForClass(Repository);

@@ -8,7 +8,6 @@ import { AuthService } from './auth.service';
 // import { appConfig } from 'src/configuration/app.config';
 import { JWTRefreshTokenStrategy } from './strategy/jwt-refresh.strategy';
 
-import { GithubService } from '../github/github.service';
 import { HttpModule } from '@nestjs/axios';
 import { EmailService } from '../email/email.service';
 import { EmailModule } from '../email/email.module';
@@ -34,7 +33,6 @@ import { EmailModule } from '../email/email.module';
     AuthService,
     JwtStrategy,
     JWTRefreshTokenStrategy,
-    GithubService,
     JwtService,
     EmailService,
   ],
