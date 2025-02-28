@@ -98,12 +98,12 @@ export class RepositoryService {
           repos.push({ user, repoUrl: response.data.repositories[i].url });
         }
       }
-      const savedRepos = await this.RepositoryModel.insertMany(repos);
+      const savedRepos = await this.RepositoryModel.insertMany(repos); //TODO: Make bulk write
 
       return savedRepos;
     } catch (error) {
       console.error('Error fetching GitHub repositories:', error.message);
-      throw new Error('Failed to fetch repositories');
+      // throw new Error('Failed to fetch repositories');
     }
   }
   async selectRepos(urlIds: string[]) {
