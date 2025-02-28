@@ -7,8 +7,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { OTPSecret } from 'src/schemas/OTPSecret.schema';
-import { User } from 'src/schemas/user.schema';
+import { OTPSecret } from '../../database/otpsecret-schema/otp-secret.schema';
+import { User } from '../../database/user-schema/user.schema';
 import { EmailTemplate } from './templates/otp-email.template';
 
 @Injectable()
