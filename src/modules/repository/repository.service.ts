@@ -5,11 +5,17 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { User, UserDocument } from 'src/schemas/user.schema';
+import { User, UserDocument } from '../../database/user-schema/user.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { Repository, RepositoryDocument } from 'src/schemas/repository.schema';
-import { GithubApp, GithubAppDocument } from 'src/schemas/GithubApp.schema';
+import {
+  Repository,
+  RepositoryDocument,
+} from '../../database/repository-schema/repository.schema';
+import {
+  GithubApp,
+  GithubAppDocument,
+} from '../../database/githubapp-schema/github-app.schema';
 import { GithubAppService } from '../github-app/github-app.service';
 @Injectable()
 export class RepositoryService {

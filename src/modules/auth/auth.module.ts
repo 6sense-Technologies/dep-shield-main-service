@@ -11,6 +11,8 @@ import { JWTRefreshTokenStrategy } from './strategy/jwt-refresh.strategy';
 import { HttpModule } from '@nestjs/axios';
 import { EmailService } from '../email/email.service';
 import { EmailModule } from '../email/email.module';
+import { UserSchemaModule } from 'src/database/user-schema/user-schema.module';
+import { OTPSecretSchemaModule } from 'src/database/otpsecret-schema/otp-secret-schema.module';
 // import { MongooseModule } from '@nestjs/mongoose';
 // import { User, UserSchema } from 'src/schemas/user.schema';
 // import { SchemasModule } from 'src/schemas/schemas.module';
@@ -18,12 +20,8 @@ import { EmailModule } from '../email/email.module';
 @Module({
   imports: [
     PassportModule,
-    // JwtModule.register({
-    //   secret: process.env.JWT_SECRET,
-    //   signOptions: { expiresIn: process.env.JWT_EXPIRE },
-    // }),
-    // MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    // SchemasModule,
+    UserSchemaModule,
+    OTPSecretSchemaModule,
     JwtModule.register({}),
     HttpModule,
     EmailModule,

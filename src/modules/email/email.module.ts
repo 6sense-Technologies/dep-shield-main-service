@@ -3,9 +3,13 @@ import { EmailController } from './email.controller';
 import { EmailService } from './email.service';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UserSchemaModule } from 'src/database/user-schema/user-schema.module';
+import { OTPSecretSchemaModule } from 'src/database/otpsecret-schema/otp-secret-schema.module';
 
 @Module({
   imports: [
+    OTPSecretSchemaModule,
+    UserSchemaModule,
     ConfigModule.forRoot(), // Load environment variables
     MailerModule.forRootAsync({
       imports: [ConfigModule],

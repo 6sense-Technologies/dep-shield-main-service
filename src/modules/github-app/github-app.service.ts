@@ -3,8 +3,11 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
-import { GithubApp, GithubAppDocument } from 'src/schemas/GithubApp.schema';
-import { User, UserDocument } from 'src/schemas/user.schema';
+import {
+  GithubApp,
+  GithubAppDocument,
+} from '../../database/githubapp-schema/github-app.schema';
+import { User, UserDocument } from '../../database/user-schema/user.schema';
 import * as jwt from 'jsonwebtoken';
 @Injectable()
 export class GithubAppService {

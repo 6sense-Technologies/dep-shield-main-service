@@ -8,11 +8,14 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { SignupDto, LoginDto, VerifyEmailDto } from './dto/auth.dto';
-import { User, UserDocument } from '../../schemas/user.schema'; // Adjust the path as needed
+import { User, UserDocument } from '../../database/user-schema/user.schema'; // Adjust the path as needed
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { EmailService } from '../email/email.service';
-import { OTPSecret, OTPSecretDocument } from 'src/schemas/OTPSecret.schema';
+import {
+  OTPSecret,
+  OTPSecretDocument,
+} from '../../database/otpsecret-schema/otp-secret.schema';
 
 @Injectable()
 export class AuthService {
