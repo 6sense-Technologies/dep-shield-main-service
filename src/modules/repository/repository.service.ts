@@ -67,21 +67,23 @@ export class RepositoryService {
   async getAllRepos(userId: string) {
     const user = await this.userModel.findById(userId).exec();
     if (!user) {
-      throw new UnauthorizedException('user is not valid');
+      throw new UnauthorizedException('User is not valid');
     }
+
     const githubApps = await this.GithubAppModel.find({ user: user });
-    // console.log(githubApps);
     if (githubApps.length === 0) {
-      throw new BadRequestException('No github app is not installed');
+      throw new BadRequestException('No GitHub app is installed');
     }
 
     try {
-      const repos = [];
-      for (let i = 0; i < githubApps.length; i += 1) {
+      const bulkOps = [];
+
+      for (const githubApp of githubApps) {
         const token = await this.githubAppService.createInstallationToken(
-          githubApps[i].installationId,
+          githubApp.installationId,
         );
-        console.log(`Querying api with access token: ${token}`);
+        console.log(`Querying API with access token: ${token}`);
+
         const response = await firstValueFrom(
           this.httpService.get(
             'https://api.github.com/installation/repositories',
@@ -91,7 +93,6 @@ export class RepositoryService {
                 Accept: 'application/vnd.github.v3+json',
               },
               params: {
-                // Fetch all repos (both private and public)
                 visibility: 'all',
                 affiliation: 'owner,collaborator,organization_member',
                 per_page: 100, // Maximum number of repos per page
@@ -99,19 +100,42 @@ export class RepositoryService {
             },
           ),
         );
-
-        for (let i = 0; i < response.data.repositories.length; i += 1) {
-          repos.push({ user, repoUrl: response.data.repositories[i].url });
+        console.log(response.data.repositories[0]);
+        for (const repo of response.data.repositories) {
+          bulkOps.push({
+            updateOne: {
+              filter: { user: user.id, repoUrl: repo.url }, // Match by user.id and repoUrl
+              update: {
+                $set: {
+                  user,
+                  repoName: repo.full_name,
+                  repoUrl: repo.url,
+                  htmlUrl: repo.html_url,
+                  repoDescription: repo.description,
+                  owner: repo.owner.login,
+                  ownerType: repo.owner.type,
+                  isPrivate: repo.private,
+                  defaultBranch: repo.default_branch,
+                  githubApp,
+                },
+              },
+              upsert: true, // Insert if not found
+            },
+          });
         }
       }
-      const savedRepos = await this.RepositoryModel.insertMany(repos); //TODO: Make bulk write
 
-      return savedRepos;
+      if (bulkOps.length > 0) {
+        await this.RepositoryModel.bulkWrite(bulkOps);
+      }
+
+      return { message: 'Repositories updated successfully' };
     } catch (error) {
       console.error('Error fetching GitHub repositories:', error.message);
-      // throw new Error('Failed to fetch repositories');
+      throw new Error('Failed to fetch repositories');
     }
   }
+
   async selectRepos(urlIds: string[]) {
     const updated = await this.RepositoryModel.updateMany(
       { _id: { $in: urlIds } }, // Selects all documents where _id is in urlIds array
