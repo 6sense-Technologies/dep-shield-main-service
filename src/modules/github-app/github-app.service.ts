@@ -37,6 +37,7 @@ export class GithubAppService {
   }
   public async createInstallationToken(installationId: string) {
     try {
+      console.log(installationId);
       const jwt = this.generateJwt();
       const tokenResponse = await firstValueFrom(
         this.httpService.post(
@@ -54,7 +55,7 @@ export class GithubAppService {
       console.log(`Installation access token ${githubInstallationAccessToken}`);
       return githubInstallationAccessToken;
     } catch {
-      console.log(`Error creating app installation token`);
+      console.log(`Error creating app installation token...`);
     }
   }
 

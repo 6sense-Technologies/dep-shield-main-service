@@ -1,7 +1,7 @@
 import { IsArray, IsMongoId } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class SelectRepoUrlDto {
+export class SelectRepoUrlsDto {
   @ApiProperty({
     description: 'Array of selected repository URLs by their MongoDB ObjectId',
     type: [String], // Indicates an array of strings (ObjectIds)
@@ -9,5 +9,5 @@ export class SelectRepoUrlDto {
   })
   @IsArray()
   @IsMongoId({ each: true }) // Validate each ID in the array
-  selectedUrls: string[]; // Array of selected URL IDs
+  selectedRepos: string[]; // Array of selected URL IDs
 }
