@@ -9,6 +9,7 @@ import {
 } from '../../database/githubapp-schema/github-app.schema';
 import { User, UserDocument } from '../../database/user-schema/user.schema';
 import * as jwt from 'jsonwebtoken';
+import { validateAuthCode, validateInstallationId } from './validator/validate';
 @Injectable()
 export class GithubAppService {
   constructor(
@@ -62,13 +63,15 @@ export class GithubAppService {
     installationId: string,
     userId: string,
   ) {
+    validateAuthCode(authCode);
+    validateInstallationId(installationId);
     try {
       console.log(
         `Invoke with authCode: ${authCode}, InstallationId: ${installationId}, from User-${userId}`,
       );
 
       const jwt = this.generateJwt();
-      console.log(jwt);
+
       const tokenResponse = await firstValueFrom(
         this.httpService.post(
           `https://api.github.com/app/installations/${installationId}/access_tokens`,
