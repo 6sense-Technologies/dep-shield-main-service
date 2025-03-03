@@ -6,7 +6,7 @@ import {
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { User, UserDocument } from '../../database/user-schema/user.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Repository,
@@ -17,6 +17,7 @@ import {
   GithubAppDocument,
 } from '../../database/githubapp-schema/github-app.schema';
 import { GithubAppService } from '../github-app/github-app.service';
+import { validatePagination } from './validator/pagination.validator';
 @Injectable()
 export class RepositoryService {
   constructor(
@@ -64,8 +65,11 @@ export class RepositoryService {
   //     throw new Error('Failed to fetch user emails');
   //   }
   // }
-  async getAllRepos(userId: string) {
+  async getAllRepos(userId: string, page = 1, limit = 10) {
     const user = await this.userModel.findById(userId).exec();
+    const { pageNum, limitNum } = validatePagination(page, limit);
+
+    const skipVal = (pageNum - 1) * limitNum;
     if (!user) {
       throw new UnauthorizedException('User is not valid');
     }
@@ -74,6 +78,7 @@ export class RepositoryService {
       user: user,
       isDeleted: false,
     });
+
     if (githubApps.length === 0) {
       throw new BadRequestException('No GitHub app is installed');
     }
@@ -105,7 +110,7 @@ export class RepositoryService {
             ),
           );
 
-          console.log(response.data.repositories[0]);
+          // console.log(response.data.repositories[0]);
 
           for (const repo of response.data.repositories) {
             bulkOps.push({
@@ -144,11 +149,61 @@ export class RepositoryService {
       if (bulkOps.length > 0) {
         await this.RepositoryModel.bulkWrite(bulkOps);
       }
+      const repositories = await this.RepositoryModel.aggregate([
+        {
+          $match: {
+            user: new Types.ObjectId(userId),
+            isDeleted: false,
+          },
+        },
+        {
+          $lookup: {
+            from: 'githubapps', // Collection name for the 'githubApp' model
+            localField: 'githubApp', // Field in the repository model that references githubApp
+            foreignField: '_id', // The field in the githubApp model
+            as: 'githubApp',
+          },
+        },
+        {
+          $unwind: {
+            path: '$githubApp',
+            preserveNullAndEmptyArrays: false, // Will only return documents with a non-null 'githubApp'
+          },
+        },
+        {
+          $match: {
+            'githubApp.isDeleted': false, // Only include repositories with githubApp that is not deleted
+          },
+        },
+        {
+          $facet: {
+            repositories: [
+              { $skip: skipVal },
+              { $limit: limit },
+              {
+                $project: {
+                  githubApp: 0, // Exclude the 'githubApp' field from the result
+                },
+              },
+            ],
+            totalCount: [
+              { $count: 'count' }, // Counts all repositories matching the criteria
+            ],
+          },
+        },
+      ]);
 
-      return await this.RepositoryModel.find({
-        user: user._id,
-        isDeleted: false,
-      });
+      // Extract repositories and total count
+      const repositoriesResult = repositories[0].repositories;
+      const totalCountResult =
+        repositories[0].totalCount.length > 0
+          ? repositories[0].totalCount[0].count
+          : 0;
+
+      return {
+        repositories: repositoriesResult,
+        totalCount: totalCountResult,
+      };
     } catch (error) {
       console.error('Unexpected error in getAllRepos:', error.message);
     }
@@ -162,101 +217,70 @@ export class RepositoryService {
 
     return updated;
   }
-  // async readRepo(repoId: string) {
-  //   // Find the repository by ID
-  //   const repo = await this.RepositoryModel.findById(repoId);
-  //   if (!repo) {
-  //     throw new NotFoundException('Repository not found');
-  //   }
 
-  //   // Extract the owner and repo name from the repoUrl
-  //   const repoUrl = repo.repoUrl;
-  //   const urlParts = repoUrl.split('/');
-  //   const owner = urlParts[urlParts.length - 2]; // Second-to-last part of the URL
-  //   const repoName = urlParts[urlParts.length - 1]; // Last part of the URL
+  async selectedRepos(page = 1, limit = 10, userId: string) {
+    const user = await this.userModel.findById(userId).exec();
+    const { pageNum, limitNum } = validatePagination(page, limit);
 
-  //   // Get the GitHub access token from the user
-  //   const user = await this.userModel.findById(repo.user).exec();
-  //   if (!user || !user.githubAccessToken || user.githubAccessToken === 'N/A') {
-  //     throw new UnauthorizedException('Invalid GitHub access token');
-  //   }
+    const skipVal = (pageNum - 1) * limitNum;
+    if (!user) {
+      throw new UnauthorizedException('User is not valid');
+    }
+    const repositories = await this.RepositoryModel.aggregate([
+      {
+        $match: {
+          user: new Types.ObjectId(userId),
+          isDeleted: false,
+          isSelected: true,
+        },
+      },
+      {
+        $lookup: {
+          from: 'githubapps', // Collection name for the 'githubApp' model
+          localField: 'githubApp', // Field in the repository model that references githubApp
+          foreignField: '_id', // The field in the githubApp model
+          as: 'githubApp',
+        },
+      },
+      {
+        $unwind: {
+          path: '$githubApp',
+          preserveNullAndEmptyArrays: false, // Will only return documents with a non-null 'githubApp'
+        },
+      },
+      {
+        $match: {
+          'githubApp.isDeleted': false, // Only include repositories with githubApp that is not deleted
+        },
+      },
+      {
+        $facet: {
+          repositories: [
+            { $skip: skipVal },
+            { $limit: limit },
+            {
+              $project: {
+                githubApp: 0, // Exclude the 'githubApp' field from the result
+              },
+            },
+          ],
+          totalCount: [
+            { $count: 'count' }, // Counts all repositories matching the criteria
+          ],
+        },
+      },
+    ]);
 
-  //   try {
-  //     // Fetch the contents of the repository
-  //     const response = await firstValueFrom(
-  //       this.httpService.get(
-  //         `https://api.github.com/repos/${owner}/${repoName}/contents`,
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${user.githubAccessToken}`,
-  //             Accept: 'application/vnd.github.v3+json',
-  //           },
-  //         },
-  //       ),
-  //     );
+    // Extract repositories and total count
+    const repositoriesResult = repositories[0].repositories;
+    const totalCountResult =
+      repositories[0].totalCount.length > 0
+        ? repositories[0].totalCount[0].count
+        : 0;
 
-  //     // Extract file names and types
-  //     const files = response.data.map((item) => ({
-  //       name: item.name,
-  //       type: item.type, // 'file' or 'dir'
-  //       path: item.path,
-  //       url: item.html_url,
-  //     }));
-
-  //     return files;
-  //   } catch (error) {
-  //     console.error('Error fetching repository contents:', error.message);
-  //     throw new Error('Failed to fetch repository contents');
-  //   }
-  // }
-
-  // async readPackageJson(repoId: string) {
-  //   // Find the repository by ID
-  //   const repo = await this.RepositoryModel.findById(repoId);
-  //   if (!repo) {
-  //     throw new NotFoundException('Repository not found');
-  //   }
-
-  //   // Extract the owner and repo name from the repoUrl
-  //   const repoUrl = repo.repoUrl;
-  //   const urlParts = repoUrl.split('/');
-  //   const owner = urlParts[urlParts.length - 2]; // Second-to-last part of the URL
-  //   const repoName = urlParts[urlParts.length - 1]; // Last part of the URL
-
-  //   // Get the GitHub access token from the user
-  //   const user = await this.userModel.findById(repo.user).exec();
-  //   if (!user || !user.githubAccessToken || user.githubAccessToken === 'N/A') {
-  //     throw new UnauthorizedException('Invalid GitHub access token');
-  //   }
-
-  //   try {
-  //     // Fetch the package.json file from the repository
-  //     const response = await firstValueFrom(
-  //       this.httpService.get(
-  //         `https://api.github.com/repos/${owner}/${repoName}/contents/package.json`,
-  //         {
-  //           headers: {
-  //             Authorization: `Bearer ${user.githubAccessToken}`,
-  //             Accept: 'application/vnd.github.v3+json',
-  //           },
-  //         },
-  //       ),
-  //     );
-
-  //     if (!response.data || !response.data.content) {
-  //       throw new NotFoundException('package.json not found');
-  //     }
-
-  //     // Decode the Base64-encoded package.json content
-  //     const packageJsonContent = Buffer.from(
-  //       response.data.content,
-  //       'base64',
-  //     ).toString('utf-8');
-
-  //     return JSON.parse(packageJsonContent); // Parse it as JSON and return
-  //   } catch (error) {
-  //     console.error('Error fetching package.json:', error.message);
-  //     throw new NotFoundException('Failed to fetch package.json file');
-  //   }
-  // }
+    return {
+      repositories: repositoriesResult,
+      totalCount: totalCountResult,
+    };
+  }
 }
