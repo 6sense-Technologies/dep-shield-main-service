@@ -29,42 +29,58 @@ export class RepositoryService {
     @InjectModel(GithubApp.name)
     private GithubAppModel: Model<GithubAppDocument>,
   ) {}
+  private getRepositoriesPipeline(
+    userId: string,
+    skipVal: number,
+    limit: number,
+    onlySelected: boolean = false,
+  ) {
+    const matchConditions: any = {
+      user: new Types.ObjectId(userId),
+      isDeleted: false,
+    };
 
-  // async verifyAccessToken(token: string) {
-  //   try {
-  //     const response = await firstValueFrom(
-  //       this.httpService.get('https://api.github.com/user', {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       }),
-  //     );
+    if (onlySelected) {
+      matchConditions.isSelected = true;
+    }
 
-  //     // If the request is successful, the token is valid
-  //     return response;
-  //   } catch {
-  //     //console.log(Error validating github token');
-  //     // If there's an error, the token is invalid
-  //     return null;
-  //   }
-  // }
-  // async getUserEmails(token: string) {
-  //   try {
-  //     const response = await firstValueFrom(
-  //       this.httpService.get('https://api.github.com/user/emails', {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //           Accept: 'application/vnd.github.v3+json',
-  //         },
-  //       }),
-  //     );
-  //     // Return the list of email addresses
-  //     return response.data[0]; // only getting the primary email address
-  //   } catch (error) {
-  //     console.error('Error fetching GitHub user emails:', error.message);
-  //     throw new Error('Failed to fetch user emails');
-  //   }
-  // }
+    return [
+      { $match: matchConditions },
+      {
+        $lookup: {
+          from: 'githubapps',
+          localField: 'githubApp',
+          foreignField: '_id',
+          as: 'githubApp',
+        },
+      },
+      {
+        $unwind: {
+          path: '$githubApp',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+      {
+        $match: {
+          'githubApp.isDeleted': false,
+        },
+      },
+      {
+        $facet: {
+          repositories: [
+            { $skip: skipVal },
+            { $limit: limit },
+            {
+              $project: {
+                githubApp: 0,
+              },
+            },
+          ],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ];
+  }
   async getAllRepos(userId: string, page = 1, limit = 10) {
     const user = await this.userModel.findById(userId).exec();
     const { pageNum, limitNum } = validatePagination(page, limit);
@@ -149,51 +165,9 @@ export class RepositoryService {
       if (bulkOps.length > 0) {
         await this.RepositoryModel.bulkWrite(bulkOps);
       }
-      const repositories = await this.RepositoryModel.aggregate([
-        {
-          $match: {
-            user: new Types.ObjectId(userId),
-            isDeleted: false,
-          },
-        },
-        {
-          $lookup: {
-            from: 'githubapps', // Collection name for the 'githubApp' model
-            localField: 'githubApp', // Field in the repository model that references githubApp
-            foreignField: '_id', // The field in the githubApp model
-            as: 'githubApp',
-          },
-        },
-        {
-          $unwind: {
-            path: '$githubApp',
-            preserveNullAndEmptyArrays: false, // Will only return documents with a non-null 'githubApp'
-          },
-        },
-        {
-          $match: {
-            'githubApp.isDeleted': false, // Only include repositories with githubApp that is not deleted
-          },
-        },
-        {
-          $facet: {
-            repositories: [
-              { $skip: skipVal },
-              { $limit: limit },
-              {
-                $project: {
-                  githubApp: 0, // Exclude the 'githubApp' field from the result
-                },
-              },
-            ],
-            totalCount: [
-              { $count: 'count' }, // Counts all repositories matching the criteria
-            ],
-          },
-        },
-      ]);
+      const pipeline = this.getRepositoriesPipeline(userId, skipVal, limitNum);
+      const repositories = await this.RepositoryModel.aggregate(pipeline);
 
-      // Extract repositories and total count
       const repositoriesResult = repositories[0].repositories;
       const totalCountResult =
         repositories[0].totalCount.length > 0
@@ -217,61 +191,23 @@ export class RepositoryService {
 
     return updated;
   }
-
   async selectedRepos(page = 1, limit = 10, userId: string) {
     const user = await this.userModel.findById(userId).exec();
     const { pageNum, limitNum } = validatePagination(page, limit);
-
     const skipVal = (pageNum - 1) * limitNum;
+
     if (!user) {
       throw new UnauthorizedException('User is not valid');
     }
-    const repositories = await this.RepositoryModel.aggregate([
-      {
-        $match: {
-          user: new Types.ObjectId(userId),
-          isDeleted: false,
-          isSelected: true,
-        },
-      },
-      {
-        $lookup: {
-          from: 'githubapps', // Collection name for the 'githubApp' model
-          localField: 'githubApp', // Field in the repository model that references githubApp
-          foreignField: '_id', // The field in the githubApp model
-          as: 'githubApp',
-        },
-      },
-      {
-        $unwind: {
-          path: '$githubApp',
-          preserveNullAndEmptyArrays: false, // Will only return documents with a non-null 'githubApp'
-        },
-      },
-      {
-        $match: {
-          'githubApp.isDeleted': false, // Only include repositories with githubApp that is not deleted
-        },
-      },
-      {
-        $facet: {
-          repositories: [
-            { $skip: skipVal },
-            { $limit: limit },
-            {
-              $project: {
-                githubApp: 0, // Exclude the 'githubApp' field from the result
-              },
-            },
-          ],
-          totalCount: [
-            { $count: 'count' }, // Counts all repositories matching the criteria
-          ],
-        },
-      },
-    ]);
 
-    // Extract repositories and total count
+    const pipeline = this.getRepositoriesPipeline(
+      userId,
+      skipVal,
+      limitNum,
+      true,
+    );
+    const repositories = await this.RepositoryModel.aggregate(pipeline);
+
     const repositoriesResult = repositories[0].repositories;
     const totalCountResult =
       repositories[0].totalCount.length > 0
