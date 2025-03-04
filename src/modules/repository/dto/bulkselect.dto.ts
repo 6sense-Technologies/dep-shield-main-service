@@ -11,3 +11,13 @@ export class SelectRepoUrlsDto {
   @IsMongoId({ each: true }) // Validate each ID in the array
   selectedRepos: string[]; // Array of selected URL IDs
 }
+
+export class SelectRepoUrlSingleDTO {
+  @ApiProperty({
+    description: 'Selected repository URL by its MongoDB ObjectId',
+    type: String,
+    example: '65b2a4e8a4b2d5c123456789',
+  })
+  @IsMongoId() // Validate as a MongoDB ObjectId
+  selectedRepo: string; // Single selected URL ID
+}
