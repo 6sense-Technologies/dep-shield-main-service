@@ -10,12 +10,17 @@ import {
 import { User, UserDocument } from '../../database/user-schema/user.schema';
 import * as jwt from 'jsonwebtoken';
 import { validateAuthCode, validateInstallationId } from './validator/validate';
+import {
+  Repository,
+  RepositoryDocument,
+} from 'src/database/repository-schema/repository.schema';
 @Injectable()
 export class GithubAppService {
   constructor(
     private readonly httpService: HttpService,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(GithubApp.name) private githubApp: Model<GithubAppDocument>,
+    @InjectModel(Repository.name) private repository: Model<RepositoryDocument>,
   ) {}
   private generateJwt(): string {
     const now = Math.floor(Date.now() / 1000); // Current time in seconds
@@ -153,11 +158,20 @@ export class GithubAppService {
         console.log(`Error uninstalling app ${githubApps[i].installationId}`);
       }
     }
-    const deleted = await this.githubApp.updateMany(
+    const deletedGithubApps = await this.githubApp.updateMany(
       { user: new Types.ObjectId(userId) },
       { $set: { isDeleted: true } },
     );
 
-    return deleted;
+    await this.repository.updateMany(
+      {
+        githubApp: {
+          $in: await this.githubApp.find({ user: userId }).distinct('_id'),
+        },
+      },
+      { $set: { isDeleted: true, isSelected: false } },
+    );
+
+    return deletedGithubApps;
   }
 }

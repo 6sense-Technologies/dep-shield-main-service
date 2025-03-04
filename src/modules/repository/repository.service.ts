@@ -148,6 +148,7 @@ export class RepositoryService {
                     isPrivate: repo.private,
                     defaultBranch: repo.default_branch,
                     githubApp: githubApps[i],
+                    isDeleted: false,
                   },
                 },
                 upsert: true, // Insert if not found
