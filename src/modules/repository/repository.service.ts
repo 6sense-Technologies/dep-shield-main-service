@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
@@ -184,13 +185,53 @@ export class RepositoryService {
   }
 
   async selectRepos(urlIds: string[]) {
+    // Find matching repositories
+    const matchedRepos = await this.RepositoryModel.find(
+      {
+        _id: { $in: urlIds },
+        isDeleted: false,
+      },
+      { _id: 1 },
+    );
+
+    // Extract matched IDs
+    const matchedIds = matchedRepos.map((repo) => repo._id.toString());
+
+    // Check if all urlIds are found
+    const notFoundIds = urlIds.filter((id) => !matchedIds.includes(id));
+    if (notFoundIds.length > 0) {
+      throw new NotFoundException(
+        `Repositories not found or deleted: ${notFoundIds.join(', ')}`,
+      );
+    }
+
+    // Update the matched repositories
     const updated = await this.RepositoryModel.updateMany(
-      { _id: { $in: urlIds } }, // Selects all documents where _id is in urlIds array
-      { $set: { isSelected: true } }, // Updates isSelected to true
+      { _id: { $in: matchedIds } },
+      { $set: { isSelected: true } },
     );
 
     return updated;
   }
+  async selectRepo(urlId: string) {
+    // Find the repository by ID and ensure it's not deleted
+    const repo = await this.RepositoryModel.findOne(
+      { _id: urlId, isDeleted: false },
+      { _id: 1 },
+    );
+
+    // If the repository is not found, throw an error
+    if (!repo) {
+      throw new NotFoundException(`Repository not found or deleted: ${urlId}`);
+    }
+
+    // Update the repository to mark it as selected
+    return await this.RepositoryModel.updateOne(
+      { _id: urlId },
+      { $set: { isSelected: true } },
+    );
+  }
+
   async selectedRepos(page = 1, limit = 10, userId: string) {
     const user = await this.userModel.findById(userId).exec();
     const { pageNum, limitNum } = validatePagination(page, limit);

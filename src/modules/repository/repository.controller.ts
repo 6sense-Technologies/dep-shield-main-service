@@ -12,7 +12,10 @@ import { RepositoryService } from './repository.service';
 // import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
-import { SelectRepoUrlsDto } from './dto/bulkselect.dto';
+import {
+  SelectRepoUrlsDto,
+  SelectRepoUrlSingleDTO,
+} from './dto/bulkselect.dto';
 // import { SelectRepoUrlDto } from './dto/github.dto';
 
 @Controller('github')
@@ -37,6 +40,14 @@ export class RepositoryController {
   @UseGuards(AccessTokenGuard)
   async selectRepos(@Body() selectRepoUrlsDTO: SelectRepoUrlsDto) {
     return this.repositoryService.selectRepos(selectRepoUrlsDTO.selectedRepos);
+  }
+  @Post('select-repo')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  async selectRepo(@Body() selectRepoUrlsSingleDTO: SelectRepoUrlSingleDTO) {
+    return this.repositoryService.selectRepo(
+      selectRepoUrlsSingleDTO.selectedRepo,
+    );
   }
 
   @Get('selected-repos')
