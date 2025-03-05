@@ -148,6 +148,7 @@ export class RepositoryService {
                     isPrivate: repo.private,
                     defaultBranch: repo.default_branch,
                     githubApp: githubApps[i],
+                    isDeleted: false,
                   },
                 },
                 upsert: true, // Insert if not found
@@ -259,5 +260,14 @@ export class RepositoryService {
       repositories: repositoriesResult,
       totalCount: totalCountResult,
     };
+  }
+  async selectAll(userId: string) {
+    const response = await this.RepositoryModel.updateMany(
+      { user: new Types.ObjectId(userId), isDeleted: false },
+      {
+        $set: { isSelected: true },
+      },
+    );
+    return response;
   }
 }

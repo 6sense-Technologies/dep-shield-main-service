@@ -4,9 +4,15 @@ import { GithubAppController } from './github-app.controller';
 import { HttpModule } from '@nestjs/axios';
 import { GithubAppSchemaModule } from 'src/database/githubapp-schema/github-app-schema.module';
 import { UserSchemaModule } from 'src/database/user-schema/user-schema.module';
+import { RepositorySchemaModule } from 'src/database/repository-schema/repository-schema.module';
 
 @Module({
-  imports: [HttpModule, GithubAppSchemaModule, UserSchemaModule],
+  imports: [
+    HttpModule,
+    GithubAppSchemaModule,
+    UserSchemaModule,
+    RepositorySchemaModule,
+  ],
   providers: [GithubAppService],
   controllers: [GithubAppController],
   exports: [GithubAppService],
