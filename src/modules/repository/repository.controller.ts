@@ -64,4 +64,10 @@ export class RepositoryController {
       req['user'].userId,
     );
   }
+  @Post('select-all')
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  async selectAllRepos(@Req() req: Request) {
+    return this.repositoryService.selectAll(req['user'].userId);
+  }
 }

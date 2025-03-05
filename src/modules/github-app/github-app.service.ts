@@ -108,6 +108,7 @@ export class GithubAppService {
 
       return githubAppInfo;
     } catch (error) {
+      console.log(error);
       console.error('Error creating app access token:', error.message);
       throw new BadRequestException('Github App Installation failed');
     }
@@ -129,7 +130,7 @@ export class GithubAppService {
       user: new Types.ObjectId(userId),
       isDeleted: false,
     });
-    // console.log(githubApps);
+    console.log(githubApps);
     for (let i = 0; i < githubApps.length; i += 1) {
       const token = this.generateJwt();
       if (!token) continue;
@@ -155,6 +156,7 @@ export class GithubAppService {
           );
         }
       } catch {
+        // console.log(error);
         console.log(`Error uninstalling app ${githubApps[i].installationId}`);
       }
     }
