@@ -178,7 +178,6 @@ export class GithubAppService {
   }
 
   public async handleAppInstallations(data: any) {
-    console.log(data);
     let action: boolean = false;
     if (data.action === 'suspend' || data.action === 'deleted') {
       console.log(`Delete github app webhook triggered......`);
@@ -188,7 +187,7 @@ export class GithubAppService {
         { installationId },
         { $set: { isDeleted: true } },
       );
-
+      console.log('App uninstalled successfully.');
       return response;
     }
     if (data.action === 'removed' && 'repositories_removed' in data) {
@@ -212,7 +211,6 @@ export class GithubAppService {
         addedRepos.push(data.repositories_added[i].full_name.toString());
       }
       console.log(addedRepos);
-      console.log(data.repositories_removed);
       // Bulk update isDeleted to false where repoName is in addedRepos
       const response = await this.repository.updateMany(
         { repoName: { $in: addedRepos } }, // Filter for repoName in addedRepos array
