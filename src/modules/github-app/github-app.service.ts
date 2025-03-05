@@ -176,4 +176,55 @@ export class GithubAppService {
 
     return deletedGithubApps;
   }
+
+  public async handleAppInstallations(data: any) {
+    console.log(data);
+    let action: boolean = false;
+    if (data.action === 'suspend' || data.action === 'deleted') {
+      console.log(`Delete github app webhook triggered......`);
+      console.log(`Deleting ${data.installation.id}.....`);
+      const installationId = data.installation.id.toString();
+      const response = await this.githubApp.updateOne(
+        { installationId },
+        { $set: { isDeleted: true } },
+      );
+
+      return response;
+    }
+    if (data.action === 'removed' && 'repositories_removed' in data) {
+      const removedRepos = [];
+      for (let i = 0; i < data.repositories_removed.length; i += 1) {
+        removedRepos.push(data.repositories_removed[i].full_name);
+      }
+      // Bulk update isDeleted to false where repoName is in removedRepos
+      const response = await this.repository.updateMany(
+        { repoName: { $in: removedRepos } }, // Filter for repoName in removedRepos array
+        { $set: { isDeleted: true } }, // Set isDeleted to true
+      );
+      action = true;
+      console.log(response);
+    }
+
+    if (data.action === 'added' && 'repositories_added' in data) {
+      const addedRepos = [];
+      console.log(data.repositories_added.length);
+      for (let i = 0; i < data.repositories_added.length; i += 1) {
+        addedRepos.push(data.repositories_added[i].full_name.toString());
+      }
+      console.log(addedRepos);
+      console.log(data.repositories_removed);
+      // Bulk update isDeleted to false where repoName is in addedRepos
+      const response = await this.repository.updateMany(
+        { repoName: { $in: addedRepos } }, // Filter for repoName in addedRepos array
+        { $set: { isDeleted: false } }, // Set isDeleted to false
+      );
+      action = true;
+      console.log(response);
+    }
+    if (action) {
+      return 'Webhook action performed';
+    } else {
+      return 'No action performed';
+    }
+  }
 }

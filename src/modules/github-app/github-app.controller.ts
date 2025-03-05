@@ -1,4 +1,12 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { GithubAppService } from './github-app.service';
 import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
@@ -33,5 +41,10 @@ export class GithubAppController {
   @Get('disconnect')
   async disConnect(@Req() req: Request) {
     return await this.githubAppService.deleteGithubApp(req['user'].userId);
+  }
+
+  @Post('webhook')
+  async webhookListener(@Body() data: any) {
+    return await this.githubAppService.handleAppInstallations(data);
   }
 }
