@@ -171,7 +171,7 @@ export class GithubAppService {
           $in: await this.githubApp.find({ user: userId }).distinct('_id'),
         },
       },
-      { $set: { isDeleted: true, isSelected: false } },
+      { $set: { isDeleted: true } },
     );
 
     return deletedGithubApps;
@@ -224,5 +224,17 @@ export class GithubAppService {
     } else {
       return 'No action performed';
     }
+  }
+  public async handleGithubRepositoryOperations(data: any) {
+    if (data.action === 'deleted') {
+      const repositoryName = data.repository.full_name;
+      const response = await this.repository.updateOne(
+        { repoName: repositoryName },
+        { $set: { isDeleted: true } },
+      );
+      console.log(response);
+      return `Github app deleted ${repositoryName}`;
+    }
+    return `No action performed`;
   }
 }
