@@ -225,4 +225,16 @@ export class GithubAppService {
       return 'No action performed';
     }
   }
+  public async handleGithubRepositoryOperations(data: any) {
+    if (data.action === 'deleted') {
+      const repositoryName = data.repository.full_name;
+      const response = await this.repository.updateOne(
+        { repoName: repositoryName },
+        { $set: { isDeleted: true } },
+      );
+      console.log(response);
+      return `Github app deleted ${repositoryName}`;
+    }
+    return `No action performed`;
+  }
 }

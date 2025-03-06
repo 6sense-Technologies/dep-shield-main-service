@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Post,
   Query,
   Req,
@@ -44,7 +45,16 @@ export class GithubAppController {
   }
 
   @Post('webhook')
-  async webhookListener(@Body() data: any) {
-    return await this.githubAppService.handleAppInstallations(data);
+  async webhookListener(
+    @Headers('X-GitHub-Event') event: string,
+    @Body() data: any,
+  ) {
+    if (event === 'installation') {
+      return await this.githubAppService.handleAppInstallations(data);
+    }
+    if (event === 'repository') {
+      return await this.githubAppService.handleGithubRepositoryOperations(data);
+    }
+    return 'No Action performed';
   }
 }
