@@ -171,7 +171,7 @@ export class GithubAppService {
           $in: await this.githubApp.find({ user: userId }).distinct('_id'),
         },
       },
-      { $set: { isDeleted: true, isSelected: false } },
+      { $set: { isDeleted: true } },
     );
 
     return deletedGithubApps;
