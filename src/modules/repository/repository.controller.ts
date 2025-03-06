@@ -18,7 +18,7 @@ import {
 } from './dto/bulkselect.dto';
 // import { SelectRepoUrlDto } from './dto/github.dto';
 
-@Controller('github')
+@Controller('repositories')
 export class RepositoryController {
   constructor(private repositoryService: RepositoryService) {}
   @Get('repos')
