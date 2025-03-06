@@ -49,7 +49,7 @@ export class GithubAppController {
     @Headers('X-GitHub-Event') event: string,
     @Body() data: any,
   ) {
-    if (event === 'installation') {
+    if (event === 'installation' || event === 'installation_repositories') {
       return await this.githubAppService.handleAppInstallations(data);
     }
     if (event === 'repository') {
