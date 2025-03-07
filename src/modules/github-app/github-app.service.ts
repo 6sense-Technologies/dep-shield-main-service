@@ -129,10 +129,11 @@ export class GithubAppService {
         continue; // Skip to the next GitHub App
       }
     }
-
+    let response = undefined;
     if (bulkOps.length > 0) {
-      await this.repository.bulkWrite(bulkOps);
+      response = await this.repository.bulkWrite(bulkOps);
     }
+    return response;
   }
   public async installApp(
     authCode: string,
@@ -176,7 +177,7 @@ export class GithubAppService {
         { upsert: true, new: true }, // Create if not exists, update if exists
       );
 
-      const response = this.fetchAllRepos(user);
+      const response = await this.fetchAllRepos(user);
       console.log(response);
 
       return githubAppInfo;
