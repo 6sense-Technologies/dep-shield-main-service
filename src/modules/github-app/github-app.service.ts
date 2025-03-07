@@ -175,12 +175,10 @@ export class GithubAppService {
         },
         { upsert: true, new: true }, // Create if not exists, update if exists
       );
-      if (githubAppInfo.upsertedCount > 0) {
-        console.log(`New installation of github account found`);
-        console.log(`Fetching repositories saved earlier...`);
-        const response = this.fetchAllRepos(user);
-        console.log(response);
-      }
+
+      const response = this.fetchAllRepos(user);
+      console.log(response);
+
       return githubAppInfo;
     } catch (error) {
       console.log(error);
