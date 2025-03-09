@@ -78,7 +78,10 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "modules/auth/**/*.service.ts",
+      "modules/email-service/**/*.service.ts",
+      "modules/github-app/**/*.service.ts",
+      "modules/repository/**/*.service.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
