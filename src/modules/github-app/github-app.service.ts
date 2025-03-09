@@ -13,7 +13,7 @@ import { validateAuthCode, validateInstallationId } from './validator/validate';
 import {
   Repository,
   RepositoryDocument,
-} from 'src/database/repository-schema/repository.schema';
+} from '../../database/repository-schema/repository.schema';
 @Injectable()
 export class GithubAppService {
   constructor(
