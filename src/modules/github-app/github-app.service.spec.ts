@@ -25,6 +25,13 @@ describe('GithubAppService', () => {
   let githubAppModel: Model<GithubAppDocument>;
   let repositoryModel: Model<RepositoryDocument>;
 
+  // Mock data constants
+  const mockUserId = '67cd0fd06f1797fd790db010';
+  const mockInstallationId = '12345';
+  const mockJwtToken = 'mock-jwt-token';
+  const mockToken = 'mock-token';
+
+  // Mock services
   const mockHttpService = {
     post: jest.fn(),
     get: jest.fn(),
@@ -53,18 +60,16 @@ describe('GithubAppService', () => {
     process.env.GITHUB_APP_ID = 'mock-app-id';
     process.env.GITHUB_PRIVATE_KEY =
       Buffer.from('mock-private-key').toString('base64');
+    console.log(httpService);
+    console.log(userModel);
+    console.log(githubAppModel);
+    console.log(repositoryModel);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GithubAppService,
-        {
-          provide: HttpService,
-          useValue: mockHttpService,
-        },
-        {
-          provide: getModelToken(User.name),
-          useValue: mockUserModel,
-        },
+        { provide: HttpService, useValue: mockHttpService },
+        { provide: getModelToken(User.name), useValue: mockUserModel },
         {
           provide: getModelToken(GithubApp.name),
           useValue: mockGithubAppModel,
@@ -86,12 +91,28 @@ describe('GithubAppService', () => {
       getModelToken(Repository.name),
     );
 
+    // Setup common mocks
+    (jwt.sign as jest.Mock).mockReturnValue(mockJwtToken);
+
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  // Helper function to mock successful token response
+  const mockSuccessfulTokenCreation = () => {
+    mockHttpService.post.mockReturnValue(
+      of({
+        data: { token: mockToken },
+        status: 201,
+      }),
+    );
+  };
+
+  // Helper function to mock API error
+  const mockApiError = () => {
+    mockHttpService.post.mockImplementation(() => {
+      throw new Error('API Error');
+    });
+  };
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -99,26 +120,13 @@ describe('GithubAppService', () => {
 
   describe('createInstallationToken', () => {
     it('should create installation token successfully', async () => {
-      const installationId = '12345';
-      const mockToken = 'mock-token';
-      const mockJwtToken = 'mock-jwt-token';
-      console.log(httpService);
-      console.log(userModel);
-      console.log(githubAppModel);
-      console.log(repositoryModel);
-      (jwt.sign as jest.Mock).mockReturnValue(mockJwtToken);
-      mockHttpService.post.mockReturnValue(
-        of({
-          data: { token: mockToken },
-          status: 201,
-        }),
-      );
+      mockSuccessfulTokenCreation();
 
-      const result = await service.createInstallationToken(installationId);
+      const result = await service.createInstallationToken(mockInstallationId);
 
       expect(jwt.sign).toHaveBeenCalled();
       expect(mockHttpService.post).toHaveBeenCalledWith(
-        `https://api.github.com/app/installations/${installationId}/access_tokens`,
+        `https://api.github.com/app/installations/${mockInstallationId}/access_tokens`,
         {},
         {
           headers: {
@@ -131,52 +139,45 @@ describe('GithubAppService', () => {
     });
 
     it('should handle errors during token creation', async () => {
-      const installationId = '12345';
-      (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
-      mockHttpService.post.mockImplementation(() => {
-        throw new Error('API Error');
-      });
+      mockApiError();
 
-      const result = await service.createInstallationToken(installationId);
+      const result = await service.createInstallationToken(mockInstallationId);
 
       expect(result).toBeUndefined();
     });
   });
 
   describe('installApp', () => {
-    it('should install app successfully', async () => {
-      const authCode = 'auth-code';
-      const installationId = '12345';
-      const userId = 'user-id';
-      const mockUser = { id: userId };
-      const mockToken = 'mock-token';
-      const mockJwtToken = 'mock-jwt-token';
+    const authCode = 'auth-code';
+    const mockUser = { id: mockUserId };
 
-      (jwt.sign as jest.Mock).mockReturnValue(mockJwtToken);
-      mockHttpService.post.mockReturnValue(
-        of({
-          data: { token: mockToken },
-          status: 201,
-        }),
-      );
+    beforeEach(() => {
       mockUserModel.findById.mockResolvedValue(mockUser);
       mockGithubAppModel.updateOne.mockResolvedValue({
         acknowledged: true,
         modifiedCount: 1,
       });
-
-      // Mock fetchAllRepos
-      const mockBulkWriteResponse = { acknowledged: true, modifiedCount: 5 };
-      mockRepositoryModel.bulkWrite.mockResolvedValue(mockBulkWriteResponse);
+      mockRepositoryModel.bulkWrite.mockResolvedValue({
+        acknowledged: true,
+        modifiedCount: 5,
+      });
       mockGithubAppModel.find.mockResolvedValue([
-        { installationId, user: userId },
+        { installationId: mockInstallationId, user: mockUserId },
       ]);
+    });
 
-      const result = await service.installApp(authCode, installationId, userId);
+    it('should install app successfully', async () => {
+      mockSuccessfulTokenCreation();
+
+      const result = await service.installApp(
+        authCode,
+        mockInstallationId,
+        mockUserId,
+      );
 
       expect(jwt.sign).toHaveBeenCalled();
       expect(mockHttpService.post).toHaveBeenCalledWith(
-        `https://api.github.com/app/installations/${installationId}/access_tokens`,
+        `https://api.github.com/app/installations/${mockInstallationId}/access_tokens`,
         {},
         {
           headers: {
@@ -185,11 +186,11 @@ describe('GithubAppService', () => {
           },
         },
       );
-      expect(mockUserModel.findById).toHaveBeenCalledWith(userId);
+      expect(mockUserModel.findById).toHaveBeenCalledWith(mockUserId);
       expect(mockGithubAppModel.updateOne).toHaveBeenCalledWith(
-        { user: mockUser.id, installationId: installationId },
+        { user: mockUser.id, installationId: mockInstallationId },
         {
-          installationId: installationId,
+          installationId: mockInstallationId,
           appInstallationAccessToken: mockToken,
           isDeleted: false,
         },
@@ -199,79 +200,39 @@ describe('GithubAppService', () => {
     });
 
     it('should throw BadRequestException when installation fails', async () => {
-      const authCode = 'auth-code';
-      const installationId = '12345';
-      const userId = 'user-id';
-
-      (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
-      mockHttpService.post.mockImplementation(() => {
-        throw new Error('API Error');
-      });
+      mockApiError();
 
       await expect(
-        service.installApp(authCode, installationId, userId),
+        service.installApp(authCode, mockInstallationId, mockUserId),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('checkStatus', () => {
     it('should return connected status when app exists', async () => {
-      const userId = '67cd0fd06f1797fd790db010';
-      mockGithubAppModel.findOne.mockResolvedValue({ installationId: '12345' });
+      mockGithubAppModel.findOne.mockResolvedValue({
+        installationId: mockInstallationId,
+      });
 
-      await service.checkStatus(userId);
+      await service.checkStatus(mockUserId);
+
       expect(mockGithubAppModel.findOne).toHaveBeenCalledWith({
-        user: new Types.ObjectId(userId),
+        user: new Types.ObjectId(mockUserId),
         isDeleted: false,
       });
-      // expect(result).toEqual({ isConnected: true });
     });
 
     it('should return disconnected status when no app exists', async () => {
-      const userId = '67cd0fd06f1797fd790db010';
       mockGithubAppModel.findOne.mockResolvedValue(null);
 
-      await service.checkStatus(userId);
+      await service.checkStatus(mockUserId);
 
       expect(mockGithubAppModel.findOne).toHaveBeenCalledWith({
-        user: new Types.ObjectId(userId),
+        user: new Types.ObjectId(mockUserId),
         isDeleted: false,
       });
-      // expect(result).toEqual({ isConnected: false });
     });
   });
-
-  // describe('deleteGithubApp', () => {
-  //   it('should delete GitHub app successfully', async () => {
-  //     const userId = '67cd0fd06f1797fd790db010';
-  //     const mockAppId = new Types.ObjectId();
-  //     const mockApps = [
-  //       { installationId: '12345', _id: mockAppId },
-  //       { installationId: '67890', _id: mockAppId },
-  //     ];
-
-  //     (jwt.sign as jest.Mock).mockReturnValue('mock-jwt-token');
-  //     mockGithubAppModel.find.mockResolvedValue(mockApps);
-  //     mockHttpService.delete.mockReturnValue(of({ status: 204 }));
-  //     mockGithubAppModel.updateMany.mockResolvedValue({ modifiedCount: 2 });
-  //     mockGithubAppModel.distinct.mockResolvedValue([mockAppId]);
-  //     mockRepositoryModel.updateMany.mockResolvedValue({ modifiedCount: 5 });
-
-  //     const result = await service.deleteGithubApp(userId);
-
-  //     // expect(mockGithubAppModel.find).toHaveBeenCalledWith({
-  //     //   user: new Types.ObjectId(userId),
-  //     //   isDeleted: false,
-  //     // });
-  //     expect(mockHttpService.delete).toHaveBeenCalledTimes(2);
-  //     expect(mockGithubAppModel.updateMany).toHaveBeenCalledWith(
-  //       { user: new Types.ObjectId(userId) },
-  //       { $set: { isDeleted: true } },
-  //     );
-  //     expect(mockRepositoryModel.updateMany).toHaveBeenCalled();
-  //     expect(result).toEqual({ modifiedCount: 2 });
-  //   });
-  // });
 
   describe('handleAppInstallations', () => {
     it('should handle app deletion event correctly', async () => {
