@@ -22,6 +22,7 @@ describe('AuthService', () => {
   let userModel: Model<User>;
   let otpSecretModel: Model<OTPSecret>;
 
+  // Mock data
   const mockUser = {
     id: 'user-id',
     emailAddress: 'test@example.com',
@@ -44,42 +45,52 @@ describe('AuthService', () => {
     updatedAt: new Date(),
   };
 
+  // Mock functions
+  const mockJwtService = {
+    sign: jest.fn().mockImplementation(() => 'token'),
+    decode: jest.fn(),
+    verify: jest.fn(),
+  };
+
+  const mockEmailService = {
+    sendEmail: jest.fn().mockResolvedValue(true),
+  };
+
+  const mockUserModel = {
+    create: jest.fn(),
+    findOne: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    exec: jest.fn(),
+  };
+
+  const mockOtpSecretModel = {
+    findOne: jest.fn(),
+  };
+
+  // Helper function to create mock findOne
+  const createMockFindOne = (returnValue) => ({
+    exec: jest.fn().mockResolvedValue(returnValue),
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         {
           provide: JwtService,
-          useValue: {
-            sign: jest.fn().mockImplementation((payload: any, options: any) => {
-              console.log(payload);
-              console.log(options);
-              return 'token';
-            }),
-            decode: jest.fn(),
-            verify: jest.fn(),
-          },
+          useValue: mockJwtService,
         },
         {
           provide: EmailService,
-          useValue: {
-            sendEmail: jest.fn().mockResolvedValue(true),
-          },
+          useValue: mockEmailService,
         },
         {
           provide: getModelToken(User.name),
-          useValue: {
-            create: jest.fn(),
-            findOne: jest.fn(),
-            findByIdAndUpdate: jest.fn(),
-            exec: jest.fn(),
-          },
+          useValue: mockUserModel,
         },
         {
           provide: getModelToken(OTPSecret.name),
-          useValue: {
-            findOne: jest.fn(),
-          },
+          useValue: mockOtpSecretModel,
         },
       ],
     }).compile();
@@ -106,6 +117,15 @@ describe('AuthService', () => {
     jest
       .spyOn(bcrypt, 'compare')
       .mockImplementation(() => Promise.resolve(true));
+
+    // Mock service methods that are commonly used
+    jest.spyOn(service as any, 'generateTokens').mockReturnValue({
+      accessToken: 'accessToken',
+      refreshToken: 'refreshToken',
+    });
+    jest
+      .spyOn(service as any, 'updateRefreshToken')
+      .mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -117,27 +137,21 @@ describe('AuthService', () => {
   });
 
   describe('signup', () => {
+    const signupDto: SignupDto = {
+      displayName: 'Test User',
+      emailAddress: 'test@example.com',
+      password: 'password123',
+    };
+
     it('should create a new user and return tokens', async () => {
-      // Mock dependencies
+      // Setup
       jest.spyOn(service, 'checkUser').mockResolvedValue(false);
       jest.spyOn(userModel, 'create').mockResolvedValue(mockUser as any);
-      jest.spyOn(service as any, 'generateTokens').mockReturnValue({
-        accessToken: 'accessToken',
-        refreshToken: 'refreshToken',
-      });
-      jest
-        .spyOn(service as any, 'updateRefreshToken')
-        .mockResolvedValue(undefined);
-      jest.spyOn(emailService, 'sendEmail').mockResolvedValue(undefined);
 
-      const signupDto: SignupDto = {
-        displayName: 'Test User',
-        emailAddress: 'test@example.com',
-        password: 'password123',
-      };
-
+      // Execute
       const result = await service.signup(signupDto);
 
+      // Assert
       expect(service.checkUser).toHaveBeenCalledWith('test@example.com');
       expect(userModel.create).toHaveBeenCalledWith({
         displayName: 'Test User',
@@ -153,14 +167,10 @@ describe('AuthService', () => {
     });
 
     it('should throw ConflictException if user already exists', async () => {
+      // Setup
       jest.spyOn(service, 'checkUser').mockResolvedValue(true);
 
-      const signupDto: SignupDto = {
-        displayName: 'Test User',
-        emailAddress: 'test@example.com',
-        password: 'password123',
-      };
-
+      // Assert
       await expect(service.signup(signupDto)).rejects.toThrow(
         ConflictException,
       );
@@ -169,13 +179,13 @@ describe('AuthService', () => {
 
   describe('checkUser', () => {
     it('should return true if user exists', async () => {
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(mockUser),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
+      // Setup
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(mockUser));
 
+      // Execute
       const result = await service.checkUser('test@example.com');
 
+      // Assert
       expect(userModel.findOne).toHaveBeenCalledWith({
         emailAddress: 'test@example.com',
       });
@@ -183,13 +193,13 @@ describe('AuthService', () => {
     });
 
     it('should return false if user does not exist', async () => {
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(null),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
+      // Setup
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(null));
 
+      // Execute
       const result = await service.checkUser('test@example.com');
 
+      // Assert
       expect(userModel.findOne).toHaveBeenCalledWith({
         emailAddress: 'test@example.com',
       });
@@ -198,27 +208,19 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
+    const loginDto: LoginDto = {
+      emailAddress: 'test@example.com',
+      password: 'password123',
+    };
+
     it('should return tokens and user info on successful login', async () => {
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(mockUser),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
-      jest.spyOn(service as any, 'generateTokens').mockReturnValue({
-        accessToken: 'accessToken',
-        refreshToken: 'refreshToken',
-      });
-      jest
-        .spyOn(service as any, 'updateRefreshToken')
-        .mockResolvedValue(undefined);
+      // Setup
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(mockUser));
 
-      const loginDto: LoginDto = {
-        emailAddress: 'test@example.com',
-        password: 'password123',
-      };
-
+      // Execute
       const result = await service.login(loginDto);
 
+      // Assert
       expect(userModel.findOne).toHaveBeenCalledWith({
         emailAddress: 'test@example.com',
         loginType: 'credential',
@@ -235,31 +237,19 @@ describe('AuthService', () => {
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(null),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
+      // Setup
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(null));
 
-      const loginDto: LoginDto = {
-        emailAddress: 'test@example.com',
-        password: 'password123',
-      };
-
+      // Assert
       await expect(service.login(loginDto)).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if password is incorrect', async () => {
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(mockUser),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
-      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+      // Setup
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(mockUser));
+      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(false);
 
-      const loginDto: LoginDto = {
-        emailAddress: 'test@example.com',
-        password: 'wrongPassword',
-      };
-
+      // Assert
       await expect(service.login(loginDto)).rejects.toThrow(
         BadRequestException,
       );
@@ -268,25 +258,16 @@ describe('AuthService', () => {
 
   describe('refreshTokens', () => {
     it('should return new tokens if refresh token is valid', async () => {
+      // Setup
       const decoded = { email: 'test@example.com', userId: 'user-id' };
-      jest.spyOn(jwtService, 'decode').mockReturnValue(decoded);
-      jest.spyOn(jwtService, 'verify').mockReturnValue(true as any);
+      mockJwtService.decode.mockReturnValue(decoded);
+      mockJwtService.verify.mockReturnValue(true);
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(mockUser));
 
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(mockUser),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
-
-      jest.spyOn(service as any, 'generateTokens').mockReturnValue({
-        accessToken: 'newAccessToken',
-        refreshToken: 'newRefreshToken',
-      });
-      jest
-        .spyOn(service as any, 'updateRefreshToken')
-        .mockResolvedValue(undefined);
-
+      // Execute
       const result = await service.refreshTokens('validRefreshToken');
 
+      // Assert
       expect(jwtService.decode).toHaveBeenCalledWith('validRefreshToken');
       expect(userModel.findOne).toHaveBeenCalledWith({
         emailAddress: 'test@example.com',
@@ -295,46 +276,43 @@ describe('AuthService', () => {
         secret: 'test-refresh-secret',
       });
       expect(result).toEqual({
-        accessToken: 'newAccessToken',
-        refreshToken: 'newRefreshToken',
+        accessToken: 'accessToken',
+        refreshToken: 'refreshToken',
       });
     });
 
     it('should throw UnauthorizedException if token cannot be decoded', async () => {
-      jest.spyOn(jwtService, 'decode').mockReturnValue(null);
+      // Setup
+      mockJwtService.decode.mockReturnValue(null);
 
+      // Assert
       await expect(service.refreshTokens('invalidToken')).rejects.toThrow(
         UnauthorizedException,
       );
     });
 
     it('should throw UnauthorizedException if user does not exist', async () => {
+      // Setup
       const decoded = { email: 'test@example.com', userId: 'user-id' };
-      jest.spyOn(jwtService, 'decode').mockReturnValue(decoded);
+      mockJwtService.decode.mockReturnValue(decoded);
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(null));
 
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(null),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
-
+      // Assert
       await expect(service.refreshTokens('validRefreshToken')).rejects.toThrow(
         UnauthorizedException,
       );
     });
 
     it('should throw UnauthorizedException if token verification fails', async () => {
+      // Setup
       const decoded = { email: 'test@example.com', userId: 'user-id' };
-      jest.spyOn(jwtService, 'decode').mockReturnValue(decoded);
-
-      const mockFindOne = {
-        exec: jest.fn().mockResolvedValue(mockUser),
-      };
-      jest.spyOn(userModel, 'findOne').mockReturnValue(mockFindOne as any);
-
-      jest.spyOn(jwtService, 'verify').mockImplementation(() => {
+      mockJwtService.decode.mockReturnValue(decoded);
+      mockUserModel.findOne.mockReturnValue(createMockFindOne(mockUser));
+      mockJwtService.verify.mockImplementation(() => {
         throw new Error('Invalid token');
       });
 
+      // Assert
       await expect(service.refreshTokens('validRefreshToken')).rejects.toThrow(
         Error,
       );
@@ -343,38 +321,39 @@ describe('AuthService', () => {
 
   describe('sendToken', () => {
     it('should call emailService.sendEmail with the provided email', async () => {
-      jest.spyOn(emailService, 'sendEmail').mockResolvedValue(undefined);
-
+      // Execute
       await service.sendToken('test@example.com');
 
+      // Assert
       expect(emailService.sendEmail).toHaveBeenCalledWith('test@example.com');
     });
   });
 
   describe('verifyToken', () => {
+    const verifyEmailDto: VerifyEmailDto = {
+      emailAddress: 'test@example.com',
+      token: '123456',
+    };
+
     it('should verify token and mark user as verified if valid', async () => {
+      // Setup
       // Mock current time to be within the 2-minute window
       const mockCurrentTime = new Date();
       const mockTokenTime = new Date(mockCurrentTime.getTime() - 60 * 1000); // 1 minute ago
-
       jest
         .spyOn(global, 'Date')
         .mockImplementation(() => mockCurrentTime as any);
 
-      jest.spyOn(otpSecretModel, 'findOne').mockResolvedValue({
+      mockOtpSecretModel.findOne.mockResolvedValue({
         ...mockOtpSecret,
         updatedAt: mockTokenTime,
-      } as any);
+      });
+      mockUserModel.findOne.mockResolvedValue(mockUser);
 
-      jest.spyOn(userModel, 'findOne').mockResolvedValue(mockUser as any);
-
-      const verifyEmailDto: VerifyEmailDto = {
-        emailAddress: 'test@example.com',
-        token: '123456',
-      };
-
+      // Execute
       const result = await service.verifyToken(verifyEmailDto);
 
+      // Assert
       expect(otpSecretModel.findOne).toHaveBeenCalledWith({
         emailAddress: 'test@example.com',
       });
@@ -385,63 +364,53 @@ describe('AuthService', () => {
       expect(mockUser.save).toHaveBeenCalled();
       expect(result).toEqual({ isValidated: true });
 
-      // Restore the Date constructor
+      // Cleanup
       jest.restoreAllMocks();
     });
 
     it('should throw BadRequestException if token entry does not exist', async () => {
-      jest.spyOn(otpSecretModel, 'findOne').mockResolvedValue(null);
+      // Setup
+      mockOtpSecretModel.findOne.mockResolvedValue(null);
 
-      const verifyEmailDto: VerifyEmailDto = {
-        emailAddress: 'test@example.com',
-        token: '123456',
-      };
-
+      // Assert
       await expect(service.verifyToken(verifyEmailDto)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should throw BadRequestException if provided token does not match stored token', async () => {
-      jest.spyOn(otpSecretModel, 'findOne').mockResolvedValue({
+      // Setup
+      mockOtpSecretModel.findOne.mockResolvedValue({
         ...mockOtpSecret,
         secret: '654321', // Different from the provided token
-      } as any);
+      });
 
-      const verifyEmailDto: VerifyEmailDto = {
-        emailAddress: 'test@example.com',
-        token: '123456',
-      };
-
+      // Assert
       await expect(service.verifyToken(verifyEmailDto)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('should throw BadRequestException if token is expired (older than 2 minutes)', async () => {
+      // Setup
       // Mock current time to make the token older than 2 minutes
       const mockCurrentTime = new Date();
       const mockTokenTime = new Date(mockCurrentTime.getTime() - 121 * 1000); // 2 minutes and 1 second ago
-
       jest
         .spyOn(global, 'Date')
         .mockImplementation(() => mockCurrentTime as any);
 
-      jest.spyOn(otpSecretModel, 'findOne').mockResolvedValue({
+      mockOtpSecretModel.findOne.mockResolvedValue({
         ...mockOtpSecret,
         updatedAt: mockTokenTime,
-      } as any);
+      });
 
-      const verifyEmailDto: VerifyEmailDto = {
-        emailAddress: 'test@example.com',
-        token: '123456',
-      };
-
+      // Assert
       await expect(service.verifyToken(verifyEmailDto)).rejects.toThrow(
         BadRequestException,
       );
 
-      // Restore the Date constructor
+      // Cleanup
       jest.restoreAllMocks();
     });
   });
