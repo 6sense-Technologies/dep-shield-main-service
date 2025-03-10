@@ -84,6 +84,12 @@
       "modules/repository/**/*.service.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "modulePathIgnorePatterns": [
+      "/src/database/githubapp-schema/",
+      "/src/database/otpsecret-schema/",
+      "/src/database/repository-schema/",
+      "/src/database/user-schema/"
+    ]
   }
 }
