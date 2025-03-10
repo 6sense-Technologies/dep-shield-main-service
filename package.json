@@ -90,6 +90,9 @@
       "/src/database/otpsecret-schema/",
       "/src/database/repository-schema/",
       "/src/database/user-schema/"
+    ],
+    "coveragePathIgnorePatterns": [
+      ".*\\.spec\\.ts$"
     ]
   }
 }
