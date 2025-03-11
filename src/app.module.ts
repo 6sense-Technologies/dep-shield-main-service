@@ -7,7 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { GithubModule } from './modules/repository/repository.module';
 import { AuthController } from './modules/auth/auth.controller';
 import { AuthService } from './modules/auth/auth.service';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
 import { EmailModule } from './modules/email/email.module';
@@ -17,23 +17,46 @@ import { GithubAppSchemaModule } from './database/githubapp-schema/github-app-sc
 import { UserSchemaModule } from './database/user-schema/user-schema.module';
 import { OTPSecretSchemaModule } from './database/otpsecret-schema/otp-secret-schema.module';
 import { RepositorySchemaModule } from './database/repository-schema/repository-schema.module';
+import { DependencySchemaModule } from './database/dependency-schema/dependency-schema.module';
+import { DependenciesModule } from './modules/dependencies/dependencies.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }), // Load environment variables
-    MongooseModule.forRoot(process.env.MONGODB_URI), // Mongoose connection
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        connection: {
+          url: configService.get<string>('REDIS_URL'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => {
+        return {
+          uri: configService.get<string>('MONGODB_URI'),
+        };
+      },
+      inject: [ConfigService],
+    }),
+    // MongooseModule.forRoot(process.env.MONGODB_URI), // Mongoose connection
     //Service Modules
     AuthModule,
     GithubModule,
     EmailModule,
     GithubAppModule,
+    DependenciesModule,
     //Schema Related Modules
     GithubAppSchemaModule,
     UserSchemaModule,
     OTPSecretSchemaModule,
     RepositorySchemaModule,
+    DependencySchemaModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],
