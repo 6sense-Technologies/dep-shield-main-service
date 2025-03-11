@@ -270,4 +270,38 @@ export class RepositoryService {
     );
     return response;
   }
+
+  async readDependencies(repoId: string, userId: string) {
+    const repository = await this.RepositoryModel.findOne({
+      _id: new Types.ObjectId(repoId),
+      user: new Types.ObjectId(userId),
+      isDeleted: false,
+    }).populate('githubApp');
+    if (repository) {
+      const accessToken = await this.githubAppService.createInstallationToken(
+        repository.githubApp.installationId,
+      );
+
+      try {
+        const response = await firstValueFrom(
+          this.httpService.get(repository.repoUrl + `/contents/package.json`, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/vnd.github.v3+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+            },
+          }),
+        ); // files can be listed using repository.repoUrl/contents/
+
+        const dependencyFile = response.data;
+        const dependencyFileContentDecoded = atob(dependencyFile.content);
+        return dependencyFileContentDecoded;
+      } catch (error) {
+        console.log(error);
+        throw new NotFoundException('Could not retrieve repository listing');
+      }
+    } else {
+      throw new NotFoundException('Repository not found.');
+    }
+  }
 }

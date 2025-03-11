@@ -70,4 +70,14 @@ export class RepositoryController {
   async selectAllRepos(@Req() req: Request) {
     return this.repositoryService.selectAll(req['user'].userId);
   }
+
+  @UseGuards(AccessTokenGuard)
+  @ApiBearerAuth()
+  @Get('read-dependencies')
+  async readDependency(@Query('repo-id') repoId: string, @Req() req: Request) {
+    return await this.repositoryService.readDependencies(
+      repoId,
+      req['user'].userId,
+    );
+  }
 }
