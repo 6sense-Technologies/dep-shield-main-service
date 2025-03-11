@@ -20,6 +20,7 @@ import { RepositorySchemaModule } from './database/repository-schema/repository-
 import { DependencySchemaModule } from './database/dependency-schema/dependency-schema.module';
 import { DependenciesModule } from './modules/dependencies/dependencies.module';
 import { BullModule } from '@nestjs/bullmq';
+import { LicenseSchemaModule } from './database/license-schema/license-schema.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { BullModule } from '@nestjs/bullmq';
     OTPSecretSchemaModule,
     RepositorySchemaModule,
     DependencySchemaModule,
+    LicenseSchemaModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],
