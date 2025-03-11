@@ -50,7 +50,7 @@ export class GithubAppController {
     @Body() data: any,
   ) {
     if (event === 'installation' || event === 'installation_repositories') {
-      return await this.githubAppService.handleAppInstallations(data);
+      return await this.githubAppService.handleAppInstallations(data, event);
     }
     if (event === 'repository') {
       return await this.githubAppService.handleGithubRepositoryOperations(data);

@@ -13,7 +13,7 @@ import { validateAuthCode, validateInstallationId } from './validator/validate';
 import {
   Repository,
   RepositoryDocument,
-} from 'src/database/repository-schema/repository.schema';
+} from '../../database/repository-schema/repository.schema';
 @Injectable()
 export class GithubAppService {
   constructor(
@@ -63,7 +63,78 @@ export class GithubAppService {
       console.log(`Error creating app installation token...`);
     }
   }
+  private async fetchAllRepos(user: any) {
+    const bulkOps = [];
+    const githubApps = await this.githubApp.find({
+      user: user,
+      isDeleted: false,
+    });
+    for (let i = 0; i < githubApps.length; i += 1) {
+      try {
+        const token = await this.createInstallationToken(
+          githubApps[i].installationId,
+        );
+        console.log(`Querying API with access token: ${token}`);
 
+        const response = await firstValueFrom(
+          this.httpService.get(
+            'https://api.github.com/installation/repositories',
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github.v3+json',
+              },
+              params: {
+                visibility: 'all',
+                affiliation: 'owner,collaborator,organization_member',
+                per_page: 100, // Maximum number of repos per page
+              },
+            },
+          ),
+        );
+
+        // console.log(response.data.repositories[0]);
+
+        for (const repo of response.data.repositories) {
+          bulkOps.push({
+            updateOne: {
+              filter: {
+                user: user.id,
+                repoUrl: repo.url,
+              }, // Match by user.id and repoUrl
+              update: {
+                $set: {
+                  user,
+                  repoName: repo.full_name,
+                  repoUrl: repo.url,
+                  htmlUrl: repo.html_url,
+                  repoDescription: repo.description,
+                  owner: repo.owner.login,
+                  ownerType: repo.owner.type,
+                  isPrivate: repo.private,
+                  defaultBranch: repo.default_branch,
+                  githubApp: githubApps[i],
+                  isDeleted: false,
+                },
+              },
+              upsert: true, // Insert if not found
+            },
+          });
+        }
+      } catch (error) {
+        console.error(
+          `Error fetching repositories for installation ${githubApps[i].installationId}:`,
+          error.message,
+        );
+        continue; // Skip to the next GitHub App
+      }
+    }
+    let response = undefined;
+    if (bulkOps.length > 0) {
+      response = await this.repository.bulkWrite(bulkOps);
+    }
+    return response;
+  }
   public async installApp(
     authCode: string,
     installationId: string,
@@ -105,6 +176,9 @@ export class GithubAppService {
         },
         { upsert: true, new: true }, // Create if not exists, update if exists
       );
+
+      const response = await this.fetchAllRepos(user);
+      console.log(response);
 
       return githubAppInfo;
     } catch (error) {
@@ -177,52 +251,73 @@ export class GithubAppService {
     return deletedGithubApps;
   }
 
-  public async handleAppInstallations(data: any) {
+  public async handleAppInstallations(data: any, event: string) {
     let action: boolean = false;
-    if (data.action === 'suspend' || data.action === 'deleted') {
-      console.log(`Delete github app webhook triggered......`);
-      console.log(`Deleting ${data.installation.id}.....`);
-      const installationId = data.installation.id.toString();
-      const response = await this.githubApp.updateOne(
-        { installationId },
-        { $set: { isDeleted: true } },
-      );
-      console.log('App uninstalled successfully.');
-      return response;
-    }
-    if (data.action === 'removed' && 'repositories_removed' in data) {
-      const removedRepos = [];
-      for (let i = 0; i < data.repositories_removed.length; i += 1) {
-        removedRepos.push(data.repositories_removed[i].full_name);
+    if (event === 'installation') {
+      if (data.action === 'suspend' || data.action === 'deleted') {
+        console.log(`Delete github app webhook triggered......`);
+        console.log(`Deleting ${data.installation.id}.....`);
+        const installationId = data.installation.id.toString();
+        const response = await this.githubApp.updateOne(
+          { installationId },
+          { $set: { isDeleted: true } },
+        );
+        console.log('App uninstalled successfully.');
+        return response;
+      } else {
+        return 'No action performed';
       }
-      // Bulk update isDeleted to false where repoName is in removedRepos
-      const response = await this.repository.updateMany(
-        { repoName: { $in: removedRepos } }, // Filter for repoName in removedRepos array
-        { $set: { isDeleted: true } }, // Set isDeleted to true
-      );
-      action = true;
-      console.log(response);
+      // if (data.action === 'created') {
+      //   ///check if there are any repositories added to the database earlier if so restore them
+      //   const repositories = data.repositories;
+      //   const selectedRepos = [];
+      //   for (let i = 0; i < repositories.length; i += 1) {
+      //     selectedRepos.push(repositories[i].full_name);
+      //   }
+      //   const response = await this.repository.updateMany(
+      //     { repoName: { $in: selectedRepos } }, // Filter for repoName in addedRepos array
+      //     { $set: { isDeleted: false } }, // Set isDeleted to false
+      //   );
+      //   return response;
+      // }
     }
+    if (event === 'installation_repositories') {
+      if (data.action === 'removed' && 'repositories_removed' in data) {
+        const removedRepos = [];
+        for (let i = 0; i < data.repositories_removed.length; i += 1) {
+          removedRepos.push(data.repositories_removed[i].full_name);
+        }
+        // Bulk update isDeleted to false where repoName is in removedRepos
+        const response = await this.repository.updateMany(
+          { repoName: { $in: removedRepos } }, // Filter for repoName in removedRepos array
+          { $set: { isDeleted: true } }, // Set isDeleted to true
+        );
+        action = true;
+        console.log(response);
+      }
 
-    if (data.action === 'added' && 'repositories_added' in data) {
-      const addedRepos = [];
-      console.log(data.repositories_added.length);
-      for (let i = 0; i < data.repositories_added.length; i += 1) {
-        addedRepos.push(data.repositories_added[i].full_name.toString());
+      if (data.action === 'added' && 'repositories_added' in data) {
+        const addedRepos = [];
+        console.log(data.repositories_added.length);
+        for (let i = 0; i < data.repositories_added.length; i += 1) {
+          addedRepos.push(data.repositories_added[i].full_name.toString());
+        }
+        console.log(addedRepos);
+        // Bulk update isDeleted to false where repoName is in addedRepos
+        const response = await this.repository.updateMany(
+          { repoName: { $in: addedRepos } }, // Filter for repoName in addedRepos array
+          { $set: { isDeleted: false } }, // Set isDeleted to false
+        );
+        action = true;
+        console.log(response);
       }
-      console.log(addedRepos);
-      // Bulk update isDeleted to false where repoName is in addedRepos
-      const response = await this.repository.updateMany(
-        { repoName: { $in: addedRepos } }, // Filter for repoName in addedRepos array
-        { $set: { isDeleted: false } }, // Set isDeleted to false
-      );
-      action = true;
-      console.log(response);
-    }
-    if (action) {
-      return 'Webhook action performed';
+      if (action) {
+        return 'Webhook action performed';
+      } else {
+        return 'No action performed';
+      }
     } else {
-      return 'No action performed';
+      return 'event name does not match';
     }
   }
   public async handleGithubRepositoryOperations(data: any) {
