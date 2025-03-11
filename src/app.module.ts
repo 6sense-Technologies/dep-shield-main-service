@@ -21,6 +21,7 @@ import { DependencySchemaModule } from './database/dependency-schema/dependency-
 import { DependenciesModule } from './modules/dependencies/dependencies.module';
 import { BullModule } from '@nestjs/bullmq';
 import { LicenseSchemaModule } from './database/license-schema/license-schema.module';
+import { LicensesModule } from './modules/licenses/licenses.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { LicenseSchemaModule } from './database/license-schema/license-schema.mo
     RepositorySchemaModule,
     DependencySchemaModule,
     LicenseSchemaModule,
+    LicensesModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],

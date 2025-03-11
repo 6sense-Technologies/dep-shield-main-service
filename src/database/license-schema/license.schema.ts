@@ -1,7 +1,7 @@
 import { Document } from 'mongoose';
 import { Prop, SchemaFactory, Schema as NestSchema } from '@nestjs/mongoose';
 
-export type DependencyDocument = License & Document;
+export type LicenseDocument = License & Document;
 
 @NestSchema({ timestamps: true })
 export class License {
