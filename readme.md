@@ -1,99 +1,188 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Depshield Backend Documentation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Depshield is a powerful tool designed to analyze and monitor the security and integrity of your code repositories. Inspired by **Debricked**, it scans for vulnerabilities, dependency limitations, and potential security risks across different branches, ensuring a secure and optimized development workflow.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Features
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Dependency Analysis**: Identify and track dependencies within your project.
+- **Vulnerability Scanning**: Detect security vulnerabilities and limitations in dependencies.
+- **Branch Monitoring**: Scan and retrieve data from repositories efficiently.
+- **Authentication & Security**: Utilizes Auth.js for authentication and Codecy for tracking code errors and duplication.
+- **Comprehensive Testing**: Ensures reliability with Jest and Playwright.
 
-## Project setup
+---
 
-```bash
-$ yarn install
+## Branching Strategy
+
+Depshield follows a structured branching strategy:
+
+- **Test Branch**: Internal testing and debugging.
+- **Beta Branch**: For client testing before release.
+- **Development Branch**: Uses the naming convention `depshield-client-vX.00.00X`, where `X` changes with each iteration.
+
+---
+
+## Configuration
+
+To configure the GitHub App credentials for the Depshield backend, set the following environment variables in your `.env` file:
+
+```env
+GITHUB_APP_ID=your_app_id
+GITHUB_APP_CLIENT_ID=your_client_id
+GITHUB_APP_CLIENT_SECRET=your_client_secret
+GITHUB_PRIVATE_KEY=your_base64_encoded_private_key
 ```
 
-## Compile and run the project
+### Step 1: Create a GitHub App
+
+1. Navigate to **Settings** > **Developer settings** > **GitHub Apps** on GitHub.
+2. Click **New GitHub App** and provide:
+   - **GitHub App Name** (e.g., "Depshield App")
+   - **Homepage URL** (your repository or website URL)
+   - **Webhook URL** (optional)
+   - **Permissions**: "Contents: Read-only" and "Metadata: Read-only"
+3. Click **Create GitHub App** and copy the **App ID** (`GITHUB_APP_ID`).
+
+### Step 2: Generate a Private Key
+
+1. In the GitHub App settings, go to **Private keys**.
+2. Click **Generate a private key** (downloads a `.pem` file).
+3. Convert the `.pem` file to a base64 string:
+   - **macOS/Linux**:
+     ```bash
+     base64 -i private-key.pem | tr -d '\n'
+     ```
+   - **Windows (PowerShell)**:
+     ```powershell
+     [Convert]::ToBase64String([IO.File]::ReadAllBytes("private-key.pem"))
+     ```
+4. Copy the output as `GITHUB_PRIVATE_KEY`.
+
+### Step 3: Set Up OAuth for the GitHub App
+
+1. In the GitHub App settings, enter your **User authorization callback URL** (e.g., `http://localhost:3000/api/auth/callback`).
+2. Save changes and copy the **Client ID** (`GITHUB_APP_CLIENT_ID`).
+3. Generate a **Client Secret** (`GITHUB_APP_CLIENT_SECRET`).
+
+### Step 4: Add to `.env` File
+
+Ensure all values are correctly set in your `.env` file as shown above.
+
+---
+
+## Technologies Used
+
+- **Framework**: Nest.js
+- **Code Quality Monitoring**: Codecy
+
+---
+
+## Getting Started
+
+### Install Dependencies
+
+Depshield uses Yarn as its package manager. If you don’t have Yarn installed, follow the [installation guide](https://classic.yarnpkg.com/lang/en/docs/install).
+
+To install all dependencies, run:
 
 ```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+yarn install
 ```
 
-## Run tests
+### Start the Development Server
 
 ```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+yarn start:dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000) to access the application.
+
+---
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Depshield can be deployed on various platforms, including Vercel and Koyeb. Below are deployment steps for Vercel.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Deploying with Vercel CLI
+
+1. Install Vercel CLI:
+   ```bash
+   npm install -g vercel
+   ```
+2. Log in to Vercel:
+   ```bash
+   vercel login
+   ```
+3. Navigate to your project directory and deploy:
+   ```bash
+   vercel
+   ```
+4. For production deployment:
+   ```bash
+   vercel --prod
+   ```
+
+### Deploying to Development and Preview Environments
+
+- **Development Environment**:
+  ```bash
+  vercel --env development
+  ```
+- **Preview Deployment** (for testing branches before merging):
+  ```bash
+  vercel --pre
+  ```
+
+### Assigning a Custom Domain
+
+1. Add your domain to Vercel:
+   ```bash
+   vercel domains add yourdomain.com
+   ```
+2. Update DNS settings as per Vercel’s instructions.
+3. Set the domain for production:
+   ```bash
+   vercel alias yourdeploymenturl yourdomain.com
+   ```
+4. Verify the domain:
+   ```bash
+   vercel domains inspect yourdomain.com
+   ```
+
+### Logging Out of Vercel CLI
 
 ```bash
-$ yarn install -g mau
-$ mau deploy
+vercel logout
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## Additional Resources
 
-Check out a few resources that may come in handy when working with NestJS:
+- [Nest.js Documentation](https://docs.nestjs.com) - Backend framework documentation.
+- [GitHub App Documentation](https://docs.github.com/en/developers/apps/building-github-apps) - Guide on building GitHub Apps.
+- [Vercel Documentation](https://vercel.com/docs) - Deployment and configuration guidance.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## Contributing
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+We welcome contributions! Please adhere to branch naming conventions and test all changes before submitting pull requests.
 
-## Stay in touch
+### Contribution Guidelines
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+1. Fork the repository.
+2. Create a feature branch (e.g., `feature/new-feature`).
+3. Commit changes with meaningful messages.
+4. Run tests before submitting a pull request.
+5. Submit a pull request for review.
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Depshield is an open-source project. See the LICENSE file for details.
+
+---
