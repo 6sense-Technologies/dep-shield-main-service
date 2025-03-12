@@ -43,6 +43,38 @@ export class DependenciesService {
     return dep;
   }
 
+  async getDetailsByDependencyName(dependencyName: string) {
+    const dep = await this.dependencyModel.aggregate([
+      {
+        $match: {
+          dependencyName: dependencyName,
+        },
+      },
+    ]);
+    if (dep.length > 0) {
+      return dep[0];
+    }
+    return null;
+  }
+
+  async getVersionByDepVersion(dependencyId: string, version: string) {
+    return await this.dependencyVersionModel.findOne({
+      dependencyId: new Types.ObjectId(dependencyId),
+      version: version,
+    });
+  }
+
+  async getVersionsInPublishRange(
+    dependencyId: string,
+    introducedVersionDate: Date,
+    fixedVersionDate: Date,
+  ) {
+    return await this.dependencyVersionModel.find({
+      dependencyId: new Types.ObjectId(dependencyId),
+      publishDate: { $gt: introducedVersionDate, $lt: fixedVersionDate },
+    });
+  }
+
   async getDetails(dependencyId: string) {
     let aggregate = [];
     if (!Types.ObjectId.isValid(dependencyId)) {

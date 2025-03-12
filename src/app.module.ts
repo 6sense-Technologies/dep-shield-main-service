@@ -22,6 +22,8 @@ import { DependenciesModule } from './modules/dependencies/dependencies.module';
 import { BullModule } from '@nestjs/bullmq';
 import { LicenseSchemaModule } from './database/license-schema/license-schema.module';
 import { LicensesModule } from './modules/licenses/licenses.module';
+import { VulnerabilitiesModule } from './modules/vulnerabilities/vulnerabilities.module';
+import { VulnerabilitySchemaModule } from './database/vulnerability-schema/vulnerability-schema.module';
 
 @Module({
   imports: [
@@ -53,6 +55,8 @@ import { LicensesModule } from './modules/licenses/licenses.module';
     EmailModule,
     GithubAppModule,
     DependenciesModule,
+    LicensesModule,
+    VulnerabilitiesModule,
     //Schema Related Modules
     GithubAppSchemaModule,
     UserSchemaModule,
@@ -60,7 +64,7 @@ import { LicensesModule } from './modules/licenses/licenses.module';
     RepositorySchemaModule,
     DependencySchemaModule,
     LicenseSchemaModule,
-    LicensesModule,
+    VulnerabilitySchemaModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],
