@@ -8,6 +8,9 @@ export class Dependency {
   @Prop({ required: true })
   dependencyName: string;
 
+  @Prop({ required: false, default: 'npm' })
+  ecosystem: string;
+
   @Prop({ required: false })
   description?: string;
 
