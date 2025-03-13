@@ -8,7 +8,13 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { VulnerabilitiesService } from './vulnerabilities.service';
 
-@Processor('vulnerabilities')
+@Processor('vulnerabilities', {
+  concurrency: 2,
+  limiter: {
+    max: 5, // Allow max 5 jobs
+    duration: 1000, // Per 1000ms (1 second)
+  },
+})
 export class VulnerabilityConsumer extends WorkerHost {
   private readonly logger = new Logger(VulnerabilityConsumer.name);
 
@@ -45,13 +51,27 @@ export class VulnerabilityConsumer extends WorkerHost {
 
   async process(job: Job<any>) {
     // Job processing logic here
-    switch (job.name) {
-      case 'get-vulnerability-info':
-        this.vulnerabilitiesService.getVulnerabilityInfo(job.data.dependencyName, job.data.ecosystem);
-        break;
-      default:
-        break;
+    try {
+      this.logger.log(`Processing ${job.name} job with data`);
+      switch (job.name) {
+        case 'get-vulnerability-info':
+          await this.vulnerabilitiesService.getVulnerabilityInfoFromOSV(
+            job.data.dependencyName,
+            job.data.ecosystem,
+          );
+          break;
+        case 'get-cve-info':
+          await this.vulnerabilitiesService.getCVEInfoFromNVD(
+            job.data.dependency,
+            job.data.vuln.cveId,
+            job.data.vuln,
+          );
+          break;
+        default:
+          break;
+      }
+    } catch (error) {
+      this.logger.error(`Error processing job ${job.name}: ${error.message}`);
     }
-    this.logger.log(`Processing ${job.name} job with data:`, job.data);
   }
 }

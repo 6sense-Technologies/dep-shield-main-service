@@ -8,7 +8,13 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { DependenciesService } from './dependencies.service';
 
-@Processor('dependency')
+@Processor('dependency', {
+  concurrency: 2,
+  limiter: {
+    max: 5, // Allow max 5 jobs
+    duration: 1000, // Per 1000ms (1 second)
+  },
+})
 export class DependencyConsumer extends WorkerHost {
   private readonly logger = new Logger(DependencyConsumer.name);
 
