@@ -35,8 +35,19 @@ export class VulnerabilitiesService {
     await this.vulnerabilityQueue.add(
       'get-vulnerability-info',
       createVulnerabilityDTO,
-      { delay: 1000, attempts: 2, removeOnComplete: true },
+      {
+        delay: 1000,
+        attempts: 2,
+        removeOnComplete: true,
+        // repeat: { every: 24 * 60 * 60 * 1000 },
+      },
     );
+  }
+
+  async getByCVEId(cveId: string) {
+    return await this.vulnerabilityModel.findOne({
+      cveId,
+    }).populate('dependencyId');
   }
 
   parseNvdResponse(nvdData) {
@@ -157,6 +168,19 @@ export class VulnerabilitiesService {
     }
   }
 
+  detectCVSSVersionFromScore(cvssVector) {
+    const match = cvssVector.match(/^CVSS:(\d+\.\d+)/); // Extract version
+    if (match) {
+      const version = match[1];
+      if (version === '3.0') {
+        return 'CVSS 3.0';
+      } else if (version === '3.1') {
+        return 'CVSS 3.1';
+      }
+    }
+    return 'Unknown CVSS Version';
+  }
+
   updateSeverityData(vulnData, cvssSeverities) {
     if (cvssSeverities && cvssSeverities.length > 0) {
       for (const severity of cvssSeverities) {
@@ -168,7 +192,8 @@ export class VulnerabilitiesService {
           };
         } else if (
           !vulnData.severity.cvssMetricV31 &&
-          severity['type'] == 'CVSS_V3'
+          severity['type'] == 'CVSS_V3' &&
+          this.detectCVSSVersionFromScore(severity['score']) === 'CVSS 3.1'
         ) {
           vulnData.severity.cvssMetricV31 = {
             source: '',
@@ -177,7 +202,8 @@ export class VulnerabilitiesService {
           };
         } else if (
           !vulnData.severity.cvssMetricV30 &&
-          severity['type'] == 'CVSS_V3'
+          severity['type'] == 'CVSS_V3' &&
+          this.detectCVSSVersionFromScore(severity['score']) === 'CVSS 3.0'
         ) {
           vulnData.severity.cvssMetricV30 = {
             source: '',
@@ -303,12 +329,12 @@ export class VulnerabilitiesService {
         `Found versions ${introducedVersion.version} to ${fixedVersion.version} for ${savedVuln.id}`,
       );
 
-      const notFixedVersions =
-        await this.dependenciesService.getVersionsInPublishRange(
-          dependency._id,
-          introducedVersion.publishDate,
-          fixedVersion.publishDate,
-        );
+      // const notFixedVersions =
+      //   await this.dependenciesService.getVersionsInPublishRange(
+      //     dependency._id,
+      //     introducedVersion.publishDate,
+      //     fixedVersion.publishDate,
+      //   );
 
       const bulkOps = [
         {
@@ -323,18 +349,18 @@ export class VulnerabilitiesService {
             upsert: true,
           },
         },
-        ...notFixedVersions.map((v) => ({
-          updateOne: {
-            filter: {
-              dependencyId: dependency._id,
-              vulnerability: savedVuln._id,
-              dependencyVersion: v._id,
-              status: 'not-fixed',
-            },
-            update: { $set: { source: affected.source } },
-            upsert: true,
-          },
-        })),
+        // ...notFixedVersions.map((v) => ({
+        //   updateOne: {
+        //     filter: {
+        //       dependencyId: dependency._id,
+        //       vulnerability: savedVuln._id,
+        //       dependencyVersion: v._id,
+        //       status: 'not-fixed',
+        //     },
+        //     update: { $set: { source: affected.source } },
+        //     upsert: true,
+        //   },
+        // })),
         {
           updateOne: {
             filter: {
