@@ -16,5 +16,6 @@ import { HttpModule } from '@nestjs/axios';
   ],
   controllers: [DependenciesController],
   providers: [DependenciesService, DependencyConsumer],
+  exports: [DependenciesService],
 })
 export class DependenciesModule {}

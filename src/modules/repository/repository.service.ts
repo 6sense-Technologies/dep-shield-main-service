@@ -19,17 +19,74 @@ import {
 } from '../../database/githubapp-schema/github-app.schema';
 import { GithubAppService } from '../github-app/github-app.service';
 import { validatePagination } from './validator/pagination.validator';
+import {
+  DependencyRepository,
+  DependencyRepositoryDocument,
+} from 'src/database/dependency-repository-schema/dependency-repository.schema';
+import { DependenciesService } from '../dependencies/dependencies.service';
 @Injectable()
 export class RepositoryService {
   constructor(
     private readonly httpService: HttpService,
     private readonly githubAppService: GithubAppService,
+    private readonly dependencyService: DependenciesService,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Repository.name)
     private RepositoryModel: Model<RepositoryDocument>,
     @InjectModel(GithubApp.name)
     private GithubAppModel: Model<GithubAppDocument>,
+    @InjectModel(DependencyRepository.name)
+    private DependencyRepositoryModel: Model<DependencyRepositoryDocument>,
   ) {}
+  onModuleInit() {
+    this.watchRepositorySelection(); // listent to db changes
+  }
+  private watchRepositorySelection() {
+    const changeStream = this.RepositoryModel.watch([
+      {
+        $match: {
+          operationType: 'update',
+          'updateDescription.updatedFields.isSelected': true, // listen to db changes when isSelected is equal to true
+        },
+      },
+    ]);
+
+    changeStream.on('change', async (change) => {
+      console.log(change);
+
+      const { documentKey, updateDescription } = change;
+      console.log(
+        `Repository ID: ${documentKey._id}, isSelected: ${updateDescription.updatedFields.isSelected}`,
+      );
+
+      // Extract repository ID
+      const repoId = documentKey._id.toString();
+
+      try {
+        // Fetch the full repository document
+        const repository = await this.RepositoryModel.findOne({
+          _id: new Types.ObjectId(repoId),
+        })
+          .populate('user') // Optionally populate user and other references
+          .exec();
+
+        if (repository) {
+          await this.saveDependencies(
+            repository._id.toString(),
+            repository.user['_id'].toString(),
+          );
+        } else {
+          console.log('Repository not found');
+        }
+      } catch (error) {
+        console.error('Error fetching repository:', error);
+      }
+    });
+
+    changeStream.on('error', (error) => {
+      console.error('Change Stream Error:', error);
+    });
+  }
   private getRepositoriesPipeline(
     userId: string,
     skipVal: number,
@@ -270,7 +327,84 @@ export class RepositoryService {
     );
     return response;
   }
+  formatDependencies(dependencies: Record<string, string>) {
+    return Object.entries(dependencies).map(([pkg, version]) => ({
+      package: pkg,
+      version:
+        typeof version === 'string'
+          ? pkg + '-' + version.replace(/^[^\d]+/, '')
+          : '',
+    }));
+  }
+  async saveDependencies(repoId: string, userId: string) {
+    const repository = await this.RepositoryModel.findOne({
+      _id: new Types.ObjectId(repoId),
+      user: new Types.ObjectId(userId),
+      isDeleted: false,
+    }).populate('githubApp');
 
+    if (!repository) {
+      throw new NotFoundException('Repository not found.');
+    }
+
+    const accessToken = await this.githubAppService.createInstallationToken(
+      repository.githubApp.installationId,
+    );
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${repository.repoUrl}/contents/package.json`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/vnd.github.v3+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+        }),
+      );
+
+      const dependencyFile = response.data;
+      const dependencyFileContentDecoded = atob(dependencyFile.content);
+      const dependencyJSON = JSON.parse(dependencyFileContentDecoded);
+      const allDependencies = {
+        ...dependencyJSON['dependencies'],
+        ...dependencyJSON['devDependencies'],
+      };
+
+      // Format dependencies
+      const formattedDependencies = this.formatDependencies(allDependencies);
+
+      // Get dependency entries in bulk
+      const dependencyEntries = await Promise.all(
+        formattedDependencies.map((dep) =>
+          this.dependencyService.create({ dependencyName: dep.package }),
+        ),
+      );
+
+      // Prepare bulk insert operations
+      const bulkOps = dependencyEntries.map((entry, index) => ({
+        updateOne: {
+          filter: {
+            repositoryId: new Types.ObjectId(repoId),
+            dependencyId: entry._id,
+          },
+          update: {
+            $set: { installedVersion: formattedDependencies[index].version },
+          },
+          upsert: true,
+        },
+      }));
+
+      // Perform bulk insert/update
+      if (bulkOps.length > 0) {
+        await this.DependencyRepositoryModel.bulkWrite(bulkOps);
+      }
+
+      return 'Done';
+    } catch (error) {
+      console.error(error);
+      throw new NotFoundException('Could not retrieve package.json');
+    }
+  }
   async readDependencies(repoId: string, userId: string) {
     const repository = await this.RepositoryModel.findOne({
       _id: new Types.ObjectId(repoId),
