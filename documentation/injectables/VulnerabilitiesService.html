@@ -1,0 +1,1557 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>ds-backend-prototype documentation</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="icon" type="image/x-icon" href="../images/favicon.ico">
+	   <link rel="stylesheet" href="../styles/style.css">
+        <link rel="stylesheet" href="../styles/dark.css">
+    </head>
+    <body>
+          <script>
+               // Blocking script to avoid flickering dark mode
+               // Dark mode toggle button
+               var useDark = window.matchMedia('(prefers-color-scheme: dark)');
+               var darkModeState = useDark.matches;
+               var $darkModeToggleSwitchers = document.querySelectorAll('.dark-mode-switch input');
+               var $darkModeToggles = document.querySelectorAll('.dark-mode-switch');
+               var darkModeStateLocal = localStorage.getItem('compodoc_darkmode-state');
+
+               function checkToggle(check) {
+                    for (var i = 0; i < $darkModeToggleSwitchers.length; i++) {
+                         $darkModeToggleSwitchers[i].checked = check;
+                    }
+               }
+
+               function toggleDarkMode(state) {
+                    if (window.localStorage) {
+                         localStorage.setItem('compodoc_darkmode-state', state);
+                    }
+
+                    checkToggle(state);
+
+                    const hasClass = document.body.classList.contains('dark');
+
+                    if (state) {
+                         for (var i = 0; i < $darkModeToggles.length; i++) {
+                              $darkModeToggles[i].classList.add('dark');
+                         }
+                         if (!hasClass) {
+                              document.body.classList.add('dark');
+                         }
+                    } else {
+                         for (var i = 0; i < $darkModeToggles.length; i++) {
+                              $darkModeToggles[i].classList.remove('dark');
+                         }
+                         if (hasClass) {
+                              document.body.classList.remove('dark');
+                         }
+                    }
+               }
+
+               useDark.addEventListener('change', function (evt) {
+                    toggleDarkMode(evt.matches);
+               });
+               if (darkModeStateLocal) {
+                    darkModeState = darkModeStateLocal === 'true';
+               }
+               toggleDarkMode(darkModeState);
+          </script>
+
+        <div class="navbar navbar-default navbar-fixed-top d-md-none p-0">
+               <div class="d-flex">
+                    <a href="../" class="navbar-brand">ds-backend-prototype documentation</a>
+                    <button type="button" class="btn btn-default btn-menu ion-ios-menu" id="btn-menu"></button>
+               </div>
+        </div>
+
+        <div class="xs-menu menu" id="mobile-menu">
+                <div id="book-search-input" role="search"><input type="text" placeholder="Type to search"></div>            <compodoc-menu></compodoc-menu>
+        </div>
+
+        <div class="container-fluid main">
+           <div class="row main">
+               <div class="d-none d-md-block menu">
+                   <compodoc-menu mode="normal"></compodoc-menu>
+               </div>
+               <!-- START CONTENT -->
+               <div class="content injectable">
+                   <div class="content-data">
+
+
+
+
+
+
+
+
+<ol class="breadcrumb">
+  <li class="breadcrumb-item">Injectables</li>
+  <li class="breadcrumb-item" >VulnerabilitiesService</li>
+</ol>
+
+<ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <a href="#info" 
+                class="nav-link"
+                class="nav-link active"
+                role="tab" id="info-tab" data-bs-toggle="tab" data-link="info">Info</a>
+        </li>
+        <li class="nav-item">
+            <a href="#source" 
+                class="nav-link"
+                
+                role="tab" id="source-tab" data-bs-toggle="tab" data-link="source">Source</a>
+        </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade active in" id="info">
+        <p class="comment">
+            <h3>File</h3>
+        </p>
+        <p class="comment">
+            <code>src/modules/vulnerabilities/vulnerabilities.service.ts</code>
+        </p>
+
+
+
+
+
+            <section data-compodoc="block-index">
+    <h3 id="index">Index</h3>
+    <table class="table table-sm table-bordered index-table">
+        <tbody>
+                <tr>
+                    <td class="col-md-4">
+                        <h6><b>Properties</b></h6>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-md-4">
+                        <ul class="index-list">
+                            <li>
+                                    <span class="modifier">Private</span>
+                                    <span class="modifier">Readonly</span>
+                                <a href="#logger" >logger</a>
+                            </li>
+                        </ul>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="col-md-4">
+                        <h6><b>Methods</b></h6>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="col-md-4">
+                        <ul class="index-list">
+                            <li>
+                                    <span class="modifier">Async</span>
+                                <a href="#create" >create</a>
+                            </li>
+                            <li>
+                                <a href="#detectCVSSVersionFromScore" >detectCVSSVersionFromScore</a>
+                            </li>
+                            <li>
+                                    <span class="modifier">Async</span>
+                                <a href="#getByCVEId" >getByCVEId</a>
+                            </li>
+                            <li>
+                                    <span class="modifier">Async</span>
+                                <a href="#getCVEInfoFromNVD" >getCVEInfoFromNVD</a>
+                            </li>
+                            <li>
+                                    <span class="modifier">Async</span>
+                                <a href="#getVulnerabilityInfoFromOSV" >getVulnerabilityInfoFromOSV</a>
+                            </li>
+                            <li>
+                                <a href="#parseNvdResponse" >parseNvdResponse</a>
+                            </li>
+                            <li>
+                                <a href="#parseOSVData" >parseOSVData</a>
+                            </li>
+                            <li>
+                                    <span class="modifier">Async</span>
+                                <a href="#processAffectedVersions" >processAffectedVersions</a>
+                            </li>
+                            <li>
+                                    <span class="modifier">Async</span>
+                                <a href="#processVulnerability" >processVulnerability</a>
+                            </li>
+                            <li>
+                                <a href="#updateSeverityData" >updateSeverityData</a>
+                            </li>
+                        </ul>
+                    </td>
+                </tr>
+
+
+
+
+
+        </tbody>
+    </table>
+</section>
+
+            <section data-compodoc="block-constructor">
+    <h3 id="constructor">Constructor</h3>
+        <table class="table table-sm table-bordered">
+            <tbody>
+                <tr>
+                    <td class="col-md-4">
+<code>constructor(httpService: HttpService, configService: ConfigService, dependenciesService: <a href="../injectables/DependenciesService.html" target="_self">DependenciesService</a>, vulnerabilityQueue: Queue, vulnerabilityModel: <a href="../classes/Vulnerability.html" target="_self">Model&lt;VulnerabilityDocument&gt;</a>, vulnerabilityVersionModel: <a href="../undefineds/VulnerabilityVersionDocument.html" target="_self">Model&lt;VulnerabilityVersionDocument&gt;</a>)</code>
+                    </td>
+                </tr>
+                        <tr>
+                            <td class="col-md-4">
+                                <div class="io-line">Defined in <a href="" data-line="21" class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:21</a></div>
+                            </td>
+                        </tr>
+
+                <tr>
+                    <td class="col-md-4">
+                            <div>
+                                    <b>Parameters :</b>
+                                    <table class="params">
+                                        <thead>
+                                            <tr>
+                                                <td>Name</td>
+                                                    <td>Type</td>
+                                                <td>Optional</td>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                                <tr>
+                                                        <td>httpService</td>
+                                                  
+                                                        <td>
+                                                                    <code>HttpService</code>
+                                                        </td>
+                                                  
+                                                    <td>
+                                                            No
+                                                    </td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                        <td>configService</td>
+                                                  
+                                                        <td>
+                                                                    <code>ConfigService</code>
+                                                        </td>
+                                                  
+                                                    <td>
+                                                            No
+                                                    </td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                        <td>dependenciesService</td>
+                                                  
+                                                        <td>
+                                                                        <code><a href="../injectables/DependenciesService.html" target="_self" >DependenciesService</a></code>
+                                                        </td>
+                                                  
+                                                    <td>
+                                                            No
+                                                    </td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                        <td>vulnerabilityQueue</td>
+                                                  
+                                                        <td>
+                                                                    <code>Queue</code>
+                                                        </td>
+                                                  
+                                                    <td>
+                                                            No
+                                                    </td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                        <td>vulnerabilityModel</td>
+                                                  
+                                                        <td>
+                                                                        <code><a href="../classes/Vulnerability.html" target="_self" >Model&lt;VulnerabilityDocument&gt;</a></code>
+                                                        </td>
+                                                  
+                                                    <td>
+                                                            No
+                                                    </td>
+                                                    
+                                                </tr>
+                                                <tr>
+                                                        <td>vulnerabilityVersionModel</td>
+                                                  
+                                                        <td>
+                                                                        <code><a href="../miscellaneous/typealiases.html#VulnerabilityVersionDocument" target="_self" >Model&lt;VulnerabilityVersionDocument&gt;</a></code>
+                                                        </td>
+                                                  
+                                                    <td>
+                                                            No
+                                                    </td>
+                                                    
+                                                </tr>
+                                        </tbody>
+                                    </table>
+                            </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+</section>
+
+            <section data-compodoc="block-methods">
+    
+    <h3 id="methods">
+        Methods
+    </h3>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="create"></a>
+                    <span class="name">
+                            <span class="modifier">Async</span>
+                        <span ><b>create</b></span>
+                        <a href="#create"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+                        <span class="modifier-icon icon ion-ios-reset"></span>
+                    <code>create(createVulnerabilityDTO: <a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank">any</a>)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="34"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:34</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                                <td>Type</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>createVulnerabilityDTO</td>
+                                            <td>
+                                                            <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="detectCVSSVersionFromScore"></a>
+                    <span class="name">
+                        <span ><b>detectCVSSVersionFromScore</b></span>
+                        <a href="#detectCVSSVersionFromScore"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+<code>detectCVSSVersionFromScore(cvssVector)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="171"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:171</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>cvssVector</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>    <code>&quot;CVSS 3.0&quot; | &quot;CVSS 3.1&quot; | &quot;Unknown CVSS Version&quot;</code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="getByCVEId"></a>
+                    <span class="name">
+                            <span class="modifier">Async</span>
+                        <span ><b>getByCVEId</b></span>
+                        <a href="#getByCVEId"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+                        <span class="modifier-icon icon ion-ios-reset"></span>
+                    <code>getByCVEId(cveId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank">string</a>)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="47"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:47</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                                <td>Type</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>cveId</td>
+                                            <td>
+                                                            <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank" >string</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>    <code>unknown</code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="getCVEInfoFromNVD"></a>
+                    <span class="name">
+                            <span class="modifier">Async</span>
+                        <span ><b>getCVEInfoFromNVD</b></span>
+                        <a href="#getCVEInfoFromNVD"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+                        <span class="modifier-icon icon ion-ios-reset"></span>
+                    <code>getCVEInfoFromNVD(dependencyId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank">string</a>, cveId: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank">string</a>, vuln: <a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank">any</a>)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="120"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:120</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                                <td>Type</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>dependencyId</td>
+                                            <td>
+                                                            <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank" >string</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>cveId</td>
+                                            <td>
+                                                            <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank" >string</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>vuln</td>
+                                            <td>
+                                                            <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="getVulnerabilityInfoFromOSV"></a>
+                    <span class="name">
+                            <span class="modifier">Async</span>
+                        <span ><b>getVulnerabilityInfoFromOSV</b></span>
+                        <a href="#getVulnerabilityInfoFromOSV"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+                        <span class="modifier-icon icon ion-ios-reset"></span>
+                    <code>getVulnerabilityInfoFromOSV(dependencyName: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank">string</a>, ecosystem: <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank">string</a>)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="227"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:227</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                                <td>Type</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>dependencyName</td>
+                                            <td>
+                                                            <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank" >string</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>ecosystem</td>
+                                            <td>
+                                                            <code><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/string" target="_blank" >string</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="parseNvdResponse"></a>
+                    <span class="name">
+                        <span ><b>parseNvdResponse</b></span>
+                        <a href="#parseNvdResponse"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+<code>parseNvdResponse(nvdData)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="53"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:53</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>nvdData</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>    <code>{ error: string; nvdVulnStatus?: undefined; nvdDescription?: undefined; metrices?: undefined; weaknesses?: undefined; } | { nvdVulnStatus: any; nvdDescription: any; metrices: { cvssMetricV40: any; cvssMetricV31: any; cvssMetricV30: any; cvssMetricV2: any; }; weaknesses: any; error?: undefined; }</code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="parseOSVData"></a>
+                    <span class="name">
+                        <span ><b>parseOSVData</b></span>
+                        <a href="#parseOSVData"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+<code>parseOSVData(data: <a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank">any</a>)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="94"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:94</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                                <td>Type</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>data</td>
+                                            <td>
+                                                            <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+                                            </td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="processAffectedVersions"></a>
+                    <span class="name">
+                            <span class="modifier">Async</span>
+                        <span ><b>processAffectedVersions</b></span>
+                        <a href="#processAffectedVersions"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+                        <span class="modifier-icon icon ion-ios-reset"></span>
+                    <code>processAffectedVersions(dependency, savedVuln, affected)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="316"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:316</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>dependency</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>savedVuln</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>affected</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="processVulnerability"></a>
+                    <span class="name">
+                            <span class="modifier">Async</span>
+                        <span ><b>processVulnerability</b></span>
+                        <a href="#processVulnerability"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+                        <span class="modifier-icon icon ion-ios-reset"></span>
+                    <code>processVulnerability(dependency, vuln)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="275"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:275</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>dependency</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>vuln</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >any</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="updateSeverityData"></a>
+                    <span class="name">
+                        <span ><b>updateSeverityData</b></span>
+                        <a href="#updateSeverityData"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td class="col-md-4">
+<code>updateSeverityData(vulnData, cvssSeverities)</code>
+                </td>
+            </tr>
+
+
+                    <tr>
+                        <td class="col-md-4">
+                            <div class="io-line">Defined in <a href="" data-line="184"
+                                    class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:184</a></div>
+                        </td>
+                    </tr>
+
+
+            <tr>
+                <td class="col-md-4">
+
+                            <div class="io-description">
+                                <b>Parameters :</b>
+                                
+                                <table class="params">
+                                    <thead>
+                                        <tr>
+                                            <td>Name</td>
+                                            <td>Optional</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                                <td>vulnData</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                        <tr>
+                                                <td>cvssSeverities</td>
+
+                                            <td>
+                                                    No
+                                            </td>
+
+
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <div class="io-description">
+                            <b>Returns : </b>        <code><a href="https://www.typescriptlang.org/docs/handbook/basic-types.html" target="_blank" >void</a></code>
+
+                        </div>
+                            <div class="io-description">
+                                
+                            </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+            <section data-compodoc="block-properties">
+    
+    <h3 id="inputs">
+        Properties
+    </h3>
+    <table class="table table-sm table-bordered">
+        <tbody>
+            <tr>
+                <td class="col-md-4">
+                    <a name="logger"></a>
+                    <span class="name">
+                            <span class="modifier">Private</span>
+                            <span class="modifier">Readonly</span>
+                        <span ><b>logger</b></span>
+                        <a href="#logger"><span class="icon ion-ios-link"></span></a>
+                    </span>
+                </td>
+            </tr>
+                <tr>
+                    <td class="col-md-4">
+                        <i>Default value : </i><code>new Logger(VulnerabilitiesService.name)</code>
+                    </td>
+                </tr>
+                    <tr>
+                        <td class="col-md-4">
+                                <div class="io-line">Defined in <a href="" data-line="21" class="link-to-prism">src/modules/vulnerabilities/vulnerabilities.service.ts:21</a></div>
+                        </td>
+                    </tr>
+
+
+        </tbody>
+    </table>
+</section>
+
+    </div>
+
+
+    <div class="tab-pane fade  tab-source-code" id="source">
+        <pre class="line-numbers compodoc-sourcecode"><code class="language-typescript">import { HttpService } from &#x27;@nestjs/axios&#x27;;
+import { InjectQueue } from &#x27;@nestjs/bullmq&#x27;;
+import { Injectable, Logger } from &#x27;@nestjs/common&#x27;;
+import { Queue } from &#x27;bullmq&#x27;;
+import { firstValueFrom } from &#x27;rxjs&#x27;;
+import { InjectModel } from &#x27;@nestjs/mongoose&#x27;;
+import { Model } from &#x27;mongoose&#x27;;
+import { ConfigService } from &#x27;@nestjs/config&#x27;;
+import { DependenciesService } from &#x27;../dependencies/dependencies.service&#x27;;
+import {
+  Vulnerability,
+  VulnerabilityDocument,
+} from &#x27;src/database/vulnerability-schema/vulnerability.schema&#x27;;
+import {
+  VulnerabilityVersion,
+  VulnerabilityVersionDocument,
+} from &#x27;src/database/vulnerability-schema/vulnerability-version.schema&#x27;;
+
+@Injectable()
+export class VulnerabilitiesService {
+  private readonly logger &#x3D; new Logger(VulnerabilitiesService.name);
+
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly dependenciesService: DependenciesService,
+    @InjectQueue(&#x27;vulnerabilities&#x27;) private vulnerabilityQueue: Queue,
+    @InjectModel(Vulnerability.name)
+    private vulnerabilityModel: Model&lt;VulnerabilityDocument&gt;,
+    @InjectModel(VulnerabilityVersion.name)
+    private vulnerabilityVersionModel: Model&lt;VulnerabilityVersionDocument&gt;,
+  ) {}
+
+  async create(createVulnerabilityDTO: any) {
+    await this.vulnerabilityQueue.add(
+      &#x27;get-vulnerability-info&#x27;,
+      createVulnerabilityDTO,
+      {
+        delay: 1000,
+        attempts: 2,
+        removeOnComplete: true,
+        // repeat: { every: 24 * 60 * 60 * 1000 },
+      },
+    );
+  }
+
+  async getByCVEId(cveId: string) {
+    return await this.vulnerabilityModel.findOne({
+      cveId,
+    }).populate(&#x27;dependencyId&#x27;);
+  }
+
+  parseNvdResponse(nvdData) {
+    if (!nvdData?.vulnerabilities || nvdData.vulnerabilities.length &#x3D;&#x3D;&#x3D; 0) {
+      return { error: &#x27;No vulnerabilities found in the response&#x27; };
+    }
+
+    const cveData &#x3D; nvdData.vulnerabilities[0]?.cve; // Assuming only one vulnerability
+    if (!cveData) return { error: &#x27;Invalid CVE structure&#x27; };
+
+    return {
+      nvdVulnStatus: cveData.vulnStatus || &#x27;&#x27;,
+      nvdDescription:
+        cveData.descriptions?.find((desc) &#x3D;&gt; desc.lang &#x3D;&#x3D;&#x3D; &#x27;en&#x27;)?.value || &#x27;&#x27;,
+      metrices: {
+        cvssMetricV40:
+          cveData.metrics?.cvssMetricV40 &amp;&amp;
+          cveData.metrics?.cvssMetricV40.length &gt; 0
+            ? cveData.metrics?.cvssMetricV40[0]
+            : null,
+        cvssMetricV31:
+          cveData.metrics?.cvssMetricV31 &amp;&amp;
+          cveData.metrics?.cvssMetricV31.length &gt; 0
+            ? cveData.metrics?.cvssMetricV31[0]
+            : null,
+        cvssMetricV30:
+          cveData.metrics?.cvssMetricV30 &amp;&amp;
+          cveData.metrics?.cvssMetricV30.length &gt; 0
+            ? cveData.metrics?.cvssMetricV30[0]
+            : null,
+        cvssMetricV2:
+          cveData.metrics?.cvssMetricV2 &amp;&amp;
+          cveData.metrics?.cvssMetricV2.length &gt; 0
+            ? cveData.metrics?.cvssMetricV2[0]
+            : null,
+      },
+      weaknesses:
+        cveData.weaknesses?.map(
+          (weakness) &#x3D;&gt; weakness.description?.[0]?.value,
+        ) || [],
+    };
+  }
+
+  parseOSVData(data: any) {
+    return data.vulns.map((vuln) &#x3D;&gt; ({
+      id: vuln.id,
+      summary: vuln.summary,
+      details: vuln.details,
+      cveId: vuln.aliases?.[0] || &#x27;&#x27;,
+      published: vuln.published,
+      cweId: vuln.database_specific?.cwe_ids || [],
+      nvd_published_at: vuln.database_specific?.nvd_published_at || &#x27;&#x27;,
+      db_severity: vuln.database_specific?.severity || &#x27;&#x27;,
+      references: vuln.references?.map((ref) &#x3D;&gt; ref.url) || [],
+      CVSSseverity: vuln.severity || [],
+      affected:
+        vuln.affected?.map((aff) &#x3D;&gt; ({
+          source: aff.database_specific?.source || &#x27;&#x27;,
+          ranges:
+            aff.ranges?.map((range) &#x3D;&gt; ({
+              introduced:
+                range.events?.find((event) &#x3D;&gt; event.introduced)?.introduced ||
+                &#x27;&#x27;,
+              fixed: range.events?.find((event) &#x3D;&gt; event.fixed)?.fixed || &#x27;&#x27;,
+            }))[0] || {}, // Pick first range if multiple exist
+        })) || [],
+    }));
+  }
+
+  async getCVEInfoFromNVD(dependencyId: string, cveId: string, vuln: any) {
+    try {
+      this.logger.log(&#x60;Fetching NVD data for ${cveId}...&#x60;);
+      const response &#x3D; await firstValueFrom(
+        this.httpService.get(
+          &#x60;https://services.nvd.nist.gov/rest/json/cves/2.0&#x60;,
+          {
+            params: { cveId },
+            headers: {
+              apiKey: this.configService.get(&#x27;NVD_API_KEY&#x27;),
+              Accept: &#x27;application/json&#x27;,
+            },
+            timeout: 10000,
+          },
+        ),
+      );
+
+      if (!response.data) {
+        this.logger.error(&#x60;Empty response for ${cveId}&#x60;);
+        return;
+      }
+
+      const cveInfo &#x3D; this.parseNvdResponse(response.data);
+      if (!cveInfo || cveInfo.error) {
+        this.logger.warn(&#x60;No valid data found for CVE: ${cveId}&#x60;);
+        return;
+      }
+      let vulnData &#x3D; {
+        nvdVulnStatus: cveInfo.nvdVulnStatus,
+        nvdDescription: cveInfo.nvdDescription,
+        weaknesses: cveInfo.weaknesses,
+        severity: cveInfo.metrices,
+      };
+
+      this.updateSeverityData(vulnData, vuln.CVSSseverity);
+
+      const savedVuln &#x3D; await this.vulnerabilityModel.findOneAndUpdate(
+        { id: vuln.id },
+        { $set: vulnData },
+        { upsert: true, new: true },
+      );
+
+      this.logger.log(&#x60;Finished processing CVE ${cveId}&#x60;);
+    } catch (error) {
+      this.logger.error(
+        &#x60;Error processing NVD CVE: ${error.message}&#x60;,
+        error.stack,
+      );
+    }
+  }
+
+  detectCVSSVersionFromScore(cvssVector) {
+    const match &#x3D; cvssVector.match(/^CVSS:(\d+\.\d+)/); // Extract version
+    if (match) {
+      const version &#x3D; match[1];
+      if (version &#x3D;&#x3D;&#x3D; &#x27;3.0&#x27;) {
+        return &#x27;CVSS 3.0&#x27;;
+      } else if (version &#x3D;&#x3D;&#x3D; &#x27;3.1&#x27;) {
+        return &#x27;CVSS 3.1&#x27;;
+      }
+    }
+    return &#x27;Unknown CVSS Version&#x27;;
+  }
+
+  updateSeverityData(vulnData, cvssSeverities) {
+    if (cvssSeverities &amp;&amp; cvssSeverities.length &gt; 0) {
+      for (const severity of cvssSeverities) {
+        if (!vulnData.severity.cvssMetricV40 &amp;&amp; severity[&#x27;type&#x27;] &#x3D;&#x3D; &#x27;CVSS_V4&#x27;) {
+          vulnData.severity.cvssMetricV40 &#x3D; {
+            source: &#x27;&#x27;,
+            type: &#x27;&#x27;,
+            cvssData: { version: &#x27;4.0&#x27;, vectorString: severity[&#x27;score&#x27;] || &#x27;&#x27; },
+          };
+        } else if (
+          !vulnData.severity.cvssMetricV31 &amp;&amp;
+          severity[&#x27;type&#x27;] &#x3D;&#x3D; &#x27;CVSS_V3&#x27; &amp;&amp;
+          this.detectCVSSVersionFromScore(severity[&#x27;score&#x27;]) &#x3D;&#x3D;&#x3D; &#x27;CVSS 3.1&#x27;
+        ) {
+          vulnData.severity.cvssMetricV31 &#x3D; {
+            source: &#x27;&#x27;,
+            type: &#x27;&#x27;,
+            cvssData: { version: &#x27;3.1&#x27;, vectorString: severity[&#x27;score&#x27;] || &#x27;&#x27; },
+          };
+        } else if (
+          !vulnData.severity.cvssMetricV30 &amp;&amp;
+          severity[&#x27;type&#x27;] &#x3D;&#x3D; &#x27;CVSS_V3&#x27; &amp;&amp;
+          this.detectCVSSVersionFromScore(severity[&#x27;score&#x27;]) &#x3D;&#x3D;&#x3D; &#x27;CVSS 3.0&#x27;
+        ) {
+          vulnData.severity.cvssMetricV30 &#x3D; {
+            source: &#x27;&#x27;,
+            type: &#x27;&#x27;,
+            cvssData: { version: &#x27;3.0&#x27;, vectorString: severity[&#x27;score&#x27;] || &#x27;&#x27; },
+          };
+        } else if (
+          !vulnData.severity.cvssMetricV2 &amp;&amp;
+          severity[&#x27;type&#x27;] &#x3D;&#x3D; &#x27;CVSS_V2&#x27;
+        ) {
+          vulnData.severity.cvssMetricV2 &#x3D; {
+            source: &#x27;&#x27;,
+            type: &#x27;&#x27;,
+            cvssData: { version: &#x27;2.0&#x27;, vectorString: severity[&#x27;score&#x27;] || &#x27;&#x27; },
+          };
+        }
+      }
+    }
+  }
+
+  async getVulnerabilityInfoFromOSV(dependencyName: string, ecosystem: string) {
+    try {
+      this.logger.log(&#x60;Fetching OSV data for ${dependencyName}...&#x60;);
+      const response &#x3D; await firstValueFrom(
+        this.httpService.post(&#x60;https://api.osv.dev/v1/query&#x60;, {
+          package: { name: dependencyName, ecosystem },
+        }),
+      );
+
+      if (!response.data) {
+        this.logger.error(&#x60;Empty response for ${dependencyName}&#x60;);
+        return;
+      }
+
+      const vulns &#x3D; this.parseOSVData(response.data);
+      if (vulns.length &#x3D;&#x3D;&#x3D; 0) {
+        this.logger.log(&#x60;No vulnerabilities found for ${dependencyName}&#x60;);
+        return;
+      }
+
+      this.logger.log(
+        &#x60;Processing ${vulns.length} vulnerabilities for ${dependencyName}&#x60;,
+      );
+
+      const dependency &#x3D;
+        await this.dependenciesService.getDetailsByDependencyName(
+          dependencyName,
+        );
+      if (!dependency) {
+        this.logger.warn(&#x60;Dependency ${dependencyName} not found in DB&#x60;);
+        return;
+      }
+
+      await Promise.all(
+        vulns.map(async (vuln) &#x3D;&gt; this.processVulnerability(dependency, vuln)),
+      );
+
+      this.logger.log(
+        &#x60;Finished processing vulnerabilities for ${dependencyName}&#x60;,
+      );
+    } catch (error) {
+      this.logger.error(
+        &#x60;Error processing OSV vulnerabilities: ${error.message}&#x60;,
+        error.stack,
+      );
+    }
+  }
+
+  async processVulnerability(dependency, vuln) {
+    await this.vulnerabilityQueue.add(
+      &#x27;get-cve-info&#x27;,
+      { dependency: dependency._id, vuln },
+      {
+        delay: 20000,
+        attempts: 2,
+        backoff: {
+          type: &#x27;exponential&#x27;,
+          delay: 5000, // Increase delay for each retry
+        },
+        removeOnComplete: true,
+      },
+    );
+
+    const vulnData &#x3D; {
+      dependencyId: dependency._id,
+      id: vuln.id,
+      summary: vuln.summary,
+      details: vuln.details,
+      cveId: vuln.cveId,
+      published: vuln.published,
+      cweId: vuln.cweId,
+      nvd_published_at: vuln.nvd_published_at,
+      intensity: vuln.db_severity,
+      references: vuln.references,
+    };
+
+    const savedVuln &#x3D; await this.vulnerabilityModel.findOneAndUpdate(
+      { id: vuln.id },
+      { $set: vulnData },
+      { upsert: true, new: true },
+    );
+
+    await Promise.all(
+      vuln.affected.map((affected) &#x3D;&gt;
+        this.processAffectedVersions(dependency, savedVuln, affected),
+      ),
+    );
+  }
+
+  async processAffectedVersions(dependency, savedVuln, affected) {
+    const introducedVersion &#x3D;
+      await this.dependenciesService.getVersionByDepVersion(
+        dependency._id,
+        affected.ranges.introduced,
+      );
+    const fixedVersion &#x3D; await this.dependenciesService.getVersionByDepVersion(
+      dependency._id,
+      affected.ranges.fixed,
+    );
+
+    if (introducedVersion &amp;&amp; fixedVersion) {
+      this.logger.log(
+        &#x60;Found versions ${introducedVersion.version} to ${fixedVersion.version} for ${savedVuln.id}&#x60;,
+      );
+
+      // const notFixedVersions &#x3D;
+      //   await this.dependenciesService.getVersionsInPublishRange(
+      //     dependency._id,
+      //     introducedVersion.publishDate,
+      //     fixedVersion.publishDate,
+      //   );
+
+      const bulkOps &#x3D; [
+        {
+          updateOne: {
+            filter: {
+              dependencyId: dependency._id,
+              vulnerability: savedVuln._id,
+              dependencyVersion: introducedVersion._id,
+              status: &#x27;introduced&#x27;,
+            },
+            update: { $set: { source: affected.source } },
+            upsert: true,
+          },
+        },
+        // ...notFixedVersions.map((v) &#x3D;&gt; ({
+        //   updateOne: {
+        //     filter: {
+        //       dependencyId: dependency._id,
+        //       vulnerability: savedVuln._id,
+        //       dependencyVersion: v._id,
+        //       status: &#x27;not-fixed&#x27;,
+        //     },
+        //     update: { $set: { source: affected.source } },
+        //     upsert: true,
+        //   },
+        // })),
+        {
+          updateOne: {
+            filter: {
+              dependencyId: dependency._id,
+              vulnerability: savedVuln._id,
+              dependencyVersion: fixedVersion._id,
+              status: &#x27;fixed&#x27;,
+            },
+            update: { $set: { source: affected.source } },
+            upsert: true,
+          },
+        },
+      ];
+
+      await this.vulnerabilityVersionModel.bulkWrite(bulkOps);
+    }
+  }
+}
+</code></pre>
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   </div><div class="search-results">
+    <div class="has-results">
+        <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+        <ul class="search-results-list"></ul>
+    </div>
+    <div class="no-results">
+        <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+    </div>
+</div>
+</div>
+               <!-- END CONTENT -->
+           </div>
+       </div>
+
+          <label class="dark-mode-switch">
+               <input type="checkbox">
+               <span class="slider">
+                    <svg class="slider-icon" viewBox="0 0 24 24" fill="none" height="20" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" width="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+                    </svg>
+               </span>
+          </label>
+
+       <script>
+            var COMPODOC_CURRENT_PAGE_DEPTH = 1;
+            var COMPODOC_CURRENT_PAGE_CONTEXT = 'injectable';
+            var COMPODOC_CURRENT_PAGE_URL = 'VulnerabilitiesService.html';
+            var MAX_SEARCH_RESULTS = 15;
+       </script>
+
+       <script>
+               $darkModeToggleSwitchers = document.querySelectorAll('.dark-mode-switch input');
+               checkToggle(darkModeState);
+               if ($darkModeToggleSwitchers.length > 0) {
+                    for (var i = 0; i < $darkModeToggleSwitchers.length; i++) {
+                         $darkModeToggleSwitchers[i].addEventListener('change', function (event) {
+                              darkModeState = !darkModeState;
+                              toggleDarkMode(darkModeState);
+                         });
+                    }
+               }
+          </script>
+
+       <script src="../js/libs/custom-elements.min.js"></script>
+       <script src="../js/libs/lit-html.js"></script>
+
+       <script src="../js/menu-wc.js" defer></script>
+       <script nomodule src="../js/menu-wc_es5.js" defer></script>
+
+       <script src="../js/libs/bootstrap-native.js"></script>
+
+       <script src="../js/libs/es6-shim.min.js"></script>
+       <script src="../js/libs/EventDispatcher.js"></script>
+       <script src="../js/libs/promise.min.js"></script>
+
+       <script src="../js/compodoc.js"></script>
+
+       <script src="../js/tabs.js"></script>
+       <script src="../js/menu.js"></script>
+       <script src="../js/libs/clipboard.min.js"></script>
+       <script src="../js/libs/prism.js"></script>
+       <script src="../js/sourceCode.js"></script>
+          <script src="../js/search/search.js"></script>
+          <script src="../js/search/lunr.min.js"></script>
+          <script src="../js/search/search-lunr.js"></script>
+          <script src="../js/search/search_index.js"></script>
+       <script src="../js/lazy-load-graphs.js"></script>
+
+
+    </body>
+</html>
