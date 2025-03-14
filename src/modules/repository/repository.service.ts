@@ -270,4 +270,12 @@ export class RepositoryService {
     );
     return response;
   }
+
+  async getRepoDetailsbyId(repoId: string) {
+    const repo = await this.RepositoryModel.findOne({_id: repoId}).populate('githubApp').exec();
+    if (!repo) {
+      return null;
+    }
+    return repo;
+  }
 }

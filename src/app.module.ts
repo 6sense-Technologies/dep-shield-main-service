@@ -24,6 +24,7 @@ import { LicenseSchemaModule } from './database/license-schema/license-schema.mo
 import { LicensesModule } from './modules/licenses/licenses.module';
 import { VulnerabilitiesModule } from './modules/vulnerabilities/vulnerabilities.module';
 import { VulnerabilitySchemaModule } from './database/vulnerability-schema/vulnerability-schema.module';
+import { RepositoryLangAnalysisModule } from './modules/repository-lang-analysis/repository-lang-analysis.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { VulnerabilitySchemaModule } from './database/vulnerability-schema/vulne
     DependencySchemaModule,
     LicenseSchemaModule,
     VulnerabilitySchemaModule,
+    RepositoryLangAnalysisModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],
