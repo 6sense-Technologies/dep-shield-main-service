@@ -24,4 +24,4 @@ import { DependencySchemaModule } from 'src/database/dependency-schema/dependenc
   providers: [RepositoryService],
   exports: [RepositoryService], // Export GithubService if it will be used in other modules
 })
-export class GithubModule {}
+export class RepositoryModule {}
