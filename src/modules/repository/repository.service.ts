@@ -1,29 +1,29 @@
+import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import { User, UserDocument } from '../../database/user-schema/user.schema';
-import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import {
-  Repository,
-  RepositoryDocument,
-} from '../../database/repository-schema/repository.schema';
-import {
-  GithubApp,
-  GithubAppDocument,
-} from '../../database/githubapp-schema/github-app.schema';
-import { GithubAppService } from '../github-app/github-app.service';
-import { validatePagination } from './validator/pagination.validator';
+import { Model, Types } from 'mongoose';
+import { firstValueFrom } from 'rxjs';
 import {
   DependencyRepository,
   DependencyRepositoryDocument,
 } from 'src/database/dependency-repository-schema/dependency-repository.schema';
+import {
+  GithubApp,
+  GithubAppDocument,
+} from '../../database/githubapp-schema/github-app.schema';
+import {
+  Repository,
+  RepositoryDocument,
+} from '../../database/repository-schema/repository.schema';
+import { User, UserDocument } from '../../database/user-schema/user.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
+import { GithubAppService } from '../github-app/github-app.service';
+import { validatePagination } from './validator/pagination.validator';
 @Injectable()
 export class RepositoryService {
   constructor(
@@ -275,12 +275,38 @@ export class RepositoryService {
     // Find the repository by ID and ensure it's not deleted
     const repo = await this.RepositoryModel.findOne(
       { _id: urlId, isDeleted: false },
-      { _id: 1 },
-    );
+      { _id: 1, repoUrl: 1, githubApp: 1 },
+    ).populate('githubApp');
 
     // If the repository is not found, throw an error
     if (!repo) {
       throw new NotFoundException(`Repository not found or deleted: ${urlId}`);
+    }
+
+    console.log(repo);
+
+    const accessToken = await this.githubAppService.createInstallationToken(
+      repo.githubApp.installationId,
+    );
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${repo.repoUrl}/contents/package.json`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/vnd.github.v3+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+        }),
+      );
+
+      const dependencyFile = response.data;
+      const dependencyFileContentDecoded = atob(dependencyFile.content);
+      const dependencyJSON = JSON.parse(dependencyFileContentDecoded);
+      const allDependencies = Object.keys(dependencyJSON['packages']);
+      console.log(allDependencies);
+    } catch (error) {
+      console.log(error);
     }
 
     // Update the repository to mark it as selected
@@ -374,11 +400,13 @@ export class RepositoryService {
       const formattedDependencies = this.formatDependencies(allDependencies);
 
       // Get dependency entries in bulk
-      const dependencyEntries = await Promise.all(
-        formattedDependencies.map((dep) =>
-          this.dependencyService.create({ dependencyName: dep.package }),
-        ),
-      );
+      // const dependencyEntries = await Promise.all(
+      //   formattedDependencies.map((dep) =>
+      //     this.dependencyService.create({ dependencyName: dep.package }),
+      //   ),
+      // );
+
+      const dependencyEntries = [];
 
       // Prepare bulk insert operations
       const bulkOps = dependencyEntries.map((entry, index) => ({
@@ -396,7 +424,7 @@ export class RepositoryService {
 
       // Perform bulk insert/update
       if (bulkOps.length > 0) {
-        await this.DependencyRepositoryModel.bulkWrite(bulkOps);
+        // await this.DependencyRepositoryModel.bulkWrite(bulkOps);
       }
 
       return 'Done';
