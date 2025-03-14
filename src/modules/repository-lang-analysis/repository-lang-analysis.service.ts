@@ -1,21 +1,26 @@
 import { HttpService } from '@nestjs/axios';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { GithubAppService } from '../github-app/github-app.service';
 import { RepositoryService } from '../repository/repository.service';
 
 @Injectable()
 export class RepositoryLangAnalysisService {
+  private readonly logger = new Logger(RepositoryLangAnalysisService.name);
+
   constructor(
     private readonly httpService: HttpService,
     private readonly githubAppService: GithubAppService,
     private readonly repositoryService: RepositoryService,
   ) {}
 
+  /**
+   * Fetch repository contents in one API call.
+   */
   private async fetchRepositoryContents(
     repoName: string,
     githubToken: string,
-  ): Promise<string[]> {
+  ): Promise<Set<string>> {
     const url = `https://api.github.com/repos/${repoName}/contents`;
 
     try {
@@ -27,8 +32,12 @@ export class RepositoryLangAnalysisService {
           },
         }),
       );
-      return response.data.map((file: { name: string }) => file.name);
+      return new Set(response.data.map((file: { name: string }) => file.name));
     } catch (error) {
+      this.logger.error(
+        `Error fetching repository contents for ${repoName}`,
+        error.stack,
+      );
       throw new HttpException(
         'Error fetching repository contents',
         HttpStatus.BAD_REQUEST,
@@ -36,7 +45,13 @@ export class RepositoryLangAnalysisService {
     }
   }
 
-  async detectLanguage(repoName: string, githubToken: string): Promise<string> {
+  /**
+   * Detect all languages used in the repository.
+   */
+  private async detectLanguage(
+    repoName: string,
+    githubToken: string,
+  ): Promise<string[]> {
     const url = `https://api.github.com/repos/${repoName}/languages`;
 
     try {
@@ -49,13 +64,13 @@ export class RepositoryLangAnalysisService {
         }),
       );
 
-      const languages = response.data;
-      return Object.keys(languages).length > 0
-        ? Object.keys(languages).reduce((a, b) =>
-            languages[a] > languages[b] ? a : b,
-          )
-        : 'Unknown';
+      const languages = Object.keys(response.data);
+      return languages.length > 0 ? languages : ['Unknown'];
     } catch (error) {
+      this.logger.error(
+        `Error fetching languages for ${repoName}`,
+        error.stack,
+      );
       throw new HttpException(
         'Error fetching repository languages',
         HttpStatus.BAD_REQUEST,
@@ -63,11 +78,11 @@ export class RepositoryLangAnalysisService {
     }
   }
 
-  async detectPackageManager(
-    repoName: string,
-    githubToken: string,
-  ): Promise<string> {
-    const packageManagerFiles = {
+  /**
+   * Detect package manager based on the presence of specific files.
+   */
+  private detectPackageManager(repositoryFiles: Set<string>): string {
+    const packageManagerFiles: Record<string, string> = {
       'package-lock.json': 'npm',
       'yarn.lock': 'yarn',
       'pnpm-lock.yaml': 'pnpm',
@@ -83,13 +98,8 @@ export class RepositoryLangAnalysisService {
       'install.json': 'bazel',
     };
 
-    const repositoryFiles = await this.fetchRepositoryContents(
-      repoName,
-      githubToken,
-    );
-
     for (const [file, manager] of Object.entries(packageManagerFiles)) {
-      if (repositoryFiles.includes(file)) {
+      if (repositoryFiles.has(file)) {
         return manager;
       }
     }
@@ -97,24 +107,35 @@ export class RepositoryLangAnalysisService {
     return 'unknown';
   }
 
+  /**
+   * Main function to analyze a repository.
+   */
   async analyzeRepository(
     repoId: string,
-  ): Promise<{ language: string; packageManager: string }> {
+  ): Promise<{ languages: string[]; packageManager: string }> {
     const repository = await this.repositoryService.getRepoDetailsbyId(repoId);
     if (!repository) {
-        throw new HttpException('Repository not found', HttpStatus.NOT_FOUND);
+      throw new HttpException('Repository not found', HttpStatus.NOT_FOUND);
     }
+
     const token = await this.githubAppService.createInstallationToken(
       repository.githubApp.installationId,
     );
     if (!token) {
-        throw new HttpException('Error creating installation token', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'Error creating installation token',
+        HttpStatus.BAD_REQUEST,
+      );
     }
-    const [language, packageManager] = await Promise.all([
+
+    // Fetch repository contents & languages in parallel
+    const [repositoryFiles, languages] = await Promise.all([
+      this.fetchRepositoryContents(repository.repoName, token),
       this.detectLanguage(repository.repoName, token),
-      this.detectPackageManager(repository.repoName, token),
     ]);
 
-    return { language, packageManager };
+    const packageManager = this.detectPackageManager(repositoryFiles);
+
+    return { languages, packageManager };
   }
 }
