@@ -25,7 +25,7 @@ export class DependencyRepository {
   @Prop({
     required: true,
     type: MongooseSchema.Types.ObjectId,
-    ref: 'DependencyRepository',
+    ref: 'Dependency',
     default: null,
   })
   parent: MongooseSchema.Types.ObjectId;
