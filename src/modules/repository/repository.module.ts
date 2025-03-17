@@ -20,4 +20,4 @@ import { GithubAppSchemaModule } from 'src/database/githubapp-schema/github-app-
   providers: [RepositoryService],
   exports: [RepositoryService], // Export GithubService if it will be used in other modules
 })
-export class GithubModule {}
+export class RepositoryModule {}
