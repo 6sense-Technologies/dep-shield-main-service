@@ -283,7 +283,7 @@ export class RepositoryService {
       throw new NotFoundException(`Repository not found or deleted: ${urlId}`);
     }
 
-    console.log(repo);
+    // console.log(repo);
 
     const accessToken = await this.githubAppService.createInstallationToken(
       repo.githubApp.installationId,
