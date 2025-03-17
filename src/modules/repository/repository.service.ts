@@ -291,7 +291,7 @@ export class RepositoryService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${repo.repoUrl}/contents/package.json`, {
+        this.httpService.get(`${repo.repoUrl}/contents/package-lock.json`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             Accept: 'application/vnd.github.v3+json',
