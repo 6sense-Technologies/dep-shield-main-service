@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
-import { GithubModule } from './modules/repository/repository.module';
+import { RepositoryModule } from './modules/repository/repository.module';
 import { AuthController } from './modules/auth/auth.controller';
 import { AuthService } from './modules/auth/auth.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -22,6 +22,8 @@ import { DependenciesModule } from './modules/dependencies/dependencies.module';
 import { BullModule } from '@nestjs/bullmq';
 import { LicenseSchemaModule } from './database/license-schema/license-schema.module';
 import { LicensesModule } from './modules/licenses/licenses.module';
+import { VulnerabilitiesModule } from './modules/vulnerabilities/vulnerabilities.module';
+import { VulnerabilitySchemaModule } from './database/vulnerability-schema/vulnerability-schema.module';
 
 @Module({
   imports: [
@@ -49,10 +51,12 @@ import { LicensesModule } from './modules/licenses/licenses.module';
     // MongooseModule.forRoot(process.env.MONGODB_URI), // Mongoose connection
     //Service Modules
     AuthModule,
-    GithubModule,
+    RepositoryModule,
     EmailModule,
     GithubAppModule,
     DependenciesModule,
+    LicensesModule,
+    VulnerabilitiesModule,
     //Schema Related Modules
     GithubAppSchemaModule,
     UserSchemaModule,
@@ -60,7 +64,7 @@ import { LicensesModule } from './modules/licenses/licenses.module';
     RepositorySchemaModule,
     DependencySchemaModule,
     LicenseSchemaModule,
-    LicensesModule,
+    VulnerabilitySchemaModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService, JwtService, EmailService],
