@@ -23,6 +23,9 @@ export class DependencyRepository {
     installedVersion: string;
 
     @Prop({ default: null })
+    requiredVersion: string;
+
+    @Prop({ default: null })
     dependencyType: string;
 
     @Prop({

@@ -320,19 +320,20 @@ export class RepositoryService {
             const dependencyFile = response.data;
             const dependencyFileContentDecoded = atob(dependencyFile.content);
             const dependencyObj = JSON.parse(dependencyFileContentDecoded);
-            const allDependencies = Object.keys(dependencyObj['packages']);
+            const allDependencies: [string, any][] = Object.entries(
+                dependencyObj['packages'],
+            );
             const dependencyVersion = {};
 
-            allDependencies.forEach((dep) => {
-                dependencyVersion[dep] = dependencyObj['packages'][dep].version;
-            });
+            // allDependencies.forEach((dep) => {
+            //     dependencyVersion[dep] = dependencyObj['packages'][dep].version;
+            // });
 
-            for (const dependency of allDependencies) {
+            for (const [dependency, dependencyData] of allDependencies) {
                 if (!dependency) continue;
 
                 const packageName = this.getPackageName(dependency);
-                const packageVersion =
-                    dependencyObj['packages'][dependency].version;
+                const packageVersion = dependencyData.version;
                 let dependencyRepo;
 
                 if (!dependencyVersion[packageName]) {
@@ -358,6 +359,34 @@ export class RepositoryService {
                             });
                     }
                 }
+
+                if (dependencyData.dependencies) {
+                    for (const [subDep, subDepVersion] of Object.entries(
+                        dependencyData.dependencies,
+                    )) {
+                        await this.registerSubDependency(
+                            subDep,
+                            repo._id as string,
+                            subDepVersion as string,
+                            dependencyRepo._id,
+                            'dependency',
+                        );
+                    }
+                }
+
+                if (dependencyData.peerDependencies) {
+                    for (const [subDep, subDepVersion] of Object.entries(
+                        dependencyData.dependencies,
+                    )) {
+                        await this.registerSubDependency(
+                            subDep,
+                            repo._id as string,
+                            subDepVersion as string,
+                            dependencyRepo._id,
+                            'peerDependency',
+                        );
+                    }
+                }
             }
 
             console.log(allDependencies);
@@ -370,6 +399,25 @@ export class RepositoryService {
             { _id: urlId },
             { $set: { isSelected: true } },
         );
+    }
+
+    private async registerSubDependency(
+        subDep: string,
+        repoId: string,
+        subDepVersion: string,
+        dependencyRepoId: string,
+        dependencyType: string,
+    ) {
+        const installedSubDep = await this.dependencyService.create({
+            dependencyName: subDep,
+        });
+        await this.DependencyRepositoryModel.create({
+            dependencyId: new Types.ObjectId(installedSubDep._id as string),
+            repositoryId: new Types.ObjectId(repoId),
+            requiredVersion: subDepVersion,
+            parent: new Types.ObjectId(dependencyRepoId),
+            dependencyType: dependencyType,
+        });
     }
 
     async selectedRepos(page = 1, limit = 10, userId: string) {
