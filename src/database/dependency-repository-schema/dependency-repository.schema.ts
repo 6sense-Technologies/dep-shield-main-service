@@ -19,7 +19,7 @@ export class DependencyRepository {
     })
     repositoryId: MongooseSchema.Types.ObjectId;
 
-    @Prop({ required: true })
+    @Prop({ default: null })
     installedVersion: string;
 
     @Prop({ default: null })
@@ -29,7 +29,6 @@ export class DependencyRepository {
     dependencyType: string;
 
     @Prop({
-        required: true,
         type: MongooseSchema.Types.ObjectId,
         ref: 'Dependency',
         default: null,
