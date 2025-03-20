@@ -391,7 +391,7 @@ export class RepositoryService {
                         //     subDep,
                         //     repo._id as string,
                         //     subDepVersion as string,
-                        //     dependencyRepo._id,
+                        //     installedDep._id as string,
                         //     'peerDependency',
                         // );
                         console.log(subDep, subDepVersion, 'sub');
@@ -460,25 +460,25 @@ export class RepositoryService {
     //                 dependencyVersion[packageName] = [];
     //             }
 
-    //             if (!dependencyVersion[packageName].includes(packageVersion)) {
-    //                 dependencyVersion[packageName].push(packageVersion);
-    //                 const installedDep = await this.dependencyService.create({
-    //                     dependencyName: packageName,
-    //                 });
+    //             // if (!dependencyVersion[packageName].includes(packageVersion)) {
+    //             dependencyVersion[packageName].push(packageVersion);
+    //             const installedDep = await this.dependencyService.create({
+    //                 dependencyName: packageName,
+    //             });
+    //             dependencyRepo = await this.DependencyRepositoryModel.findOne({
+    //                 dependencyId: installedDep._id,
+    //                 repositoryId: repo._id,
+    //                 installedVersion: packageVersion,
+    //             });
+    //             if (!dependencyRepo) {
     //                 dependencyRepo =
-    //                     await this.DependencyRepositoryModel.findOne({
+    //                     await this.DependencyRepositoryModel.create({
     //                         dependencyId: installedDep._id,
-    //                         installedVersion: packageName,
+    //                         repositoryId: repo._id,
+    //                         installedVersion: packageVersion,
     //                     });
-    //                 if (!dependencyRepo) {
-    //                     dependencyRepo =
-    //                         await this.DependencyRepositoryModel.create({
-    //                             dependencyId: installedDep._id,
-    //                             repositoryId: repo._id,
-    //                             installedVersion: packageVersion,
-    //                         });
-    //                 }
     //             }
+    //             //}
 
     //             if (dependencyData.dependencies) {
     //                 for (const [subDep, subDepVersion] of Object.entries(
@@ -488,7 +488,7 @@ export class RepositoryService {
     //                         subDep,
     //                         repo._id as string,
     //                         subDepVersion as string,
-    //                         dependencyRepo._id,
+    //                         installedDep._id as string,
     //                         'dependency',
     //                     );
     //                 }
@@ -502,7 +502,7 @@ export class RepositoryService {
     //                         subDep,
     //                         repo._id as string,
     //                         subDepVersion as string,
-    //                         dependencyRepo._id,
+    //                         installedDep._id as string,
     //                         'peerDependency',
     //                     );
     //                 }
