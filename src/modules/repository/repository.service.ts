@@ -88,6 +88,19 @@ export class RepositoryService {
             console.error('Change Stream Error:', error);
         });
     }
+
+    private getRepositoryLicensePipeline() {}
+
+    async getLicensesByRepoId(
+        repoId: string,
+        page: number,
+        limit: number,
+        userId: string,
+    ) {
+        // const licenses = this.DependencyRepositoryModel.aggregate();
+        return 'from repo';
+    }
+
     private getRepositoriesPipeline(
         userId: string,
         skipVal: number,
