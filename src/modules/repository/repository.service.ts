@@ -726,4 +726,115 @@ export class RepositoryService {
             throw new NotFoundException('Repository not found.');
         }
     }
+
+    async getLicensesWithDependencyCount(
+        userId: string,
+        repoId: string,
+        page = 1,
+        limit = 10,
+    ) {
+        // Fetch the repository by userId and repoId
+        const repository = await this.RepositoryModel.findOne({
+            _id: new Types.ObjectId(repoId),
+            user: new Types.ObjectId(userId),
+            isDeleted: false,
+        }).populate('githubApp');
+
+        if (!repository) {
+            throw new NotFoundException('Repository not found.');
+        }
+
+        // Aggregation pipeline to get licenses with dependency count
+        const pipeline = [
+            {
+                $match: {
+                    repositoryId: new Types.ObjectId(repoId),
+                    installedVersion: { $ne: null },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencies',
+                    localField: 'dependencyId',
+                    foreignField: '_id',
+                    as: 'dependency',
+                },
+            },
+            {
+                $unwind: '$dependency',
+            },
+            {
+                $lookup: {
+                    from: 'licenses',
+                    localField: 'dependency.license',
+                    foreignField: 'licenseId',
+                    as: 'licenseDetails',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$licenseDetails',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $group: {
+                    _id: '$dependency.license',
+                    count: { $sum: 1 },
+                    licenseRisk: {
+                        $first: '$licenseDetails.useCase.licenseRisk',
+                    },
+                    licenseFamily: {
+                        $first: '$licenseDetails.useCase.licenseFamily',
+                    },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    license: '$_id',
+                    count: 1,
+                    licenseRisk: { $ifNull: ['$licenseRisk', null] },
+                    licenseFamily: { $ifNull: ['$licenseFamily', null] },
+                },
+            },
+            {
+                $skip: (page - 1) * limit,
+            },
+            {
+                $limit: limit,
+            },
+        ];
+
+        const licensesWithCount =
+            await this.DependencyRepositoryModel.aggregate(pipeline);
+
+        // Get total count for pagination
+        const totalCountPipeline = [
+            {
+                $match: {
+                    repositoryId: new Types.ObjectId(repoId),
+                    installedVersion: { $ne: null },
+                },
+            },
+            {
+                $group: {
+                    _id: '$dependency.license',
+                },
+            },
+            {
+                $count: 'totalCount',
+            },
+        ];
+
+        const totalCountResult =
+            await this.DependencyRepositoryModel.aggregate(totalCountPipeline);
+        const totalCount =
+            totalCountResult.length > 0 ? totalCountResult[0].totalCount : 0;
+
+        return {
+            licenses: licensesWithCount,
+            totalCount,
+        };
+    }
 }
