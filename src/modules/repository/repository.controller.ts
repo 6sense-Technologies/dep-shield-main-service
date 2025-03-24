@@ -77,11 +77,18 @@ export class RepositoryController {
         @Query('limit') limit: string,
         @Req() req: Request,
     ) {
-        return this.repositoryService.getLicensesByRepoId(
+        // return this.repositoryService.getLicensesByRepoId(
+        //     req['user'].userId,
+        //     repoId,
+        //     +page,
+        //     +limit,
+        // );
+
+        return this.repositoryService.getLicensesWithDependencyCount(
+            req['user'].userId,
             repoId,
             +page,
             +limit,
-            req['user'].userId,
         );
     }
 

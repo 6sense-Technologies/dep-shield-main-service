@@ -92,10 +92,10 @@ export class RepositoryService {
     private getRepositoryLicensePipeline() {}
 
     async getLicensesByRepoId(
+        userId: string,
         repoId: string,
         page: number,
         limit: number,
-        userId: string,
     ) {
         // const licenses = this.DependencyRepositoryModel.aggregate();
         return 'from repo';
@@ -760,9 +760,9 @@ export class RepositoryService {
                     as: 'dependency',
                 },
             },
-            {
-                $unwind: '$dependency',
-            },
+            // {
+            //     $unwind: '$dependency',
+            // },
             {
                 $lookup: {
                     from: 'licenses',
@@ -810,31 +810,31 @@ export class RepositoryService {
             await this.DependencyRepositoryModel.aggregate(pipeline);
 
         // Get total count for pagination
-        const totalCountPipeline = [
-            {
-                $match: {
-                    repositoryId: new Types.ObjectId(repoId),
-                    installedVersion: { $ne: null },
-                },
-            },
-            {
-                $group: {
-                    _id: '$dependency.license',
-                },
-            },
-            {
-                $count: 'totalCount',
-            },
-        ];
+        // const totalCountPipeline = [
+        //     {
+        //         $match: {
+        //             repositoryId: new Types.ObjectId(repoId),
+        //             installedVersion: { $ne: null },
+        //         },
+        //     },
+        //     {
+        //         $group: {
+        //             _id: '$dependency.license',
+        //         },
+        //     },
+        //     {
+        //         $count: 'totalCount',
+        //     },
+        // ];
 
-        const totalCountResult =
-            await this.DependencyRepositoryModel.aggregate(totalCountPipeline);
-        const totalCount =
-            totalCountResult.length > 0 ? totalCountResult[0].totalCount : 0;
+        // const totalCountResult =
+        //     await this.DependencyRepositoryModel.aggregate(totalCountPipeline);
+        // const totalCount =
+        //     totalCountResult.length > 0 ? totalCountResult[0].totalCount : 0;
 
         return {
             licenses: licensesWithCount,
-            totalCount,
+            totalCount: 0,
         };
     }
 }
