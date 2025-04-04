@@ -89,18 +89,6 @@ export class RepositoryService {
         });
     }
 
-    private getRepositoryLicensePipeline() {}
-
-    async getLicensesByRepoId(
-        userId: string,
-        repoId: string,
-        page: number,
-        limit: number,
-    ) {
-        // const licenses = this.DependencyRepositoryModel.aggregate();
-        return 'from repo';
-    }
-
     private getRepositoriesPipeline(
         userId: string,
         skipVal: number,
@@ -303,156 +291,41 @@ export class RepositoryService {
         );
     }
 
-    async selectRepo(urlId: string) {
-        // Find the repository by ID and ensure it's not deleted
-        const repo = { _id: '67c7ad1743029bcbed4be37b' };
-
-        // If the repository is not found, throw an error
-        // if (!repo) {
-        //     throw new NotFoundException(
-        //         `Repository not found or deleted: ${urlId}`,
-        //     );
-        // }
-
-        // console.log(repo);
-
-        // const accessToken = await this.githubAppService.createInstallationToken(
-        //     repo.githubApp.installationId,
-        // );
-
-        try {
-            // const response = await firstValueFrom(
-            //     this.httpService.get(
-            //         `${repo.repoUrl}/contents/package-lock.json`,
-            //         {
-            //             headers: {
-            //                 Authorization: `Bearer ${accessToken}`,
-            //                 Accept: 'application/vnd.github.v3+json',
-            //                 'X-GitHub-Api-Version': '2022-11-28',
-            //             },
-            //         },
-            //     ),
-            // );
-
-            // const dependencyFile = response.data;
-            // const dependencyFileContentDecoded = atob(dependencyFile.content);
-            // const dependencyObj = JSON.parse(dependencyFileContentDecoded);
-            const dependencyObj = await this.getDependencyFileContent();
-            const allDependencies: [string, any][] = Object.entries(
-                dependencyObj['packages'],
-            );
-            const dependencyVersion = {};
-
-            // allDependencies.forEach((dep) => {
-            //     dependencyVersion[dep] = dependencyObj['packages'][dep].version;
-            // });
-
-            for (const [dependency, dependencyData] of allDependencies) {
-                if (!dependency) continue;
-
-                const packageName = this.getPackageName(dependency);
-                const packageVersion = dependencyData.version;
-                let dependencyRepo;
-
-                if (!dependencyVersion[packageName]) {
-                    dependencyVersion[packageName] = [];
-                }
-
-                //if (!dependencyVersion[packageName].includes(packageVersion)) {
-                dependencyVersion[packageName].push(packageVersion);
-                const installedDep = await this.dependencyService.create({
-                    dependencyName: packageName,
-                });
-                // const installedDep = { _id: '67c7ad1743029bcbed4be37b' };
-                dependencyRepo = await this.DependencyRepositoryModel.findOne({
-                    dependencyId: installedDep._id,
-                    repositoryId: repo._id,
-                    installedVersion: packageVersion,
-                });
-                if (!dependencyRepo) {
-                    dependencyRepo =
-                        await this.DependencyRepositoryModel.create({
-                            dependencyId: installedDep._id,
-                            repositoryId: repo._id,
-                            installedVersion: packageVersion,
-                        });
-                    console.log('creating');
-                }
-                //}
-                console.log(packageName, packageVersion, installedDep._id);
-                if (dependencyData.dependencies) {
-                    for (const [subDep, subDepVersion] of Object.entries(
-                        dependencyData.dependencies,
-                    )) {
-                        console.log(subDep, subDepVersion, 'sub');
-
-                        await this.registerSubDependency(
-                            subDep,
-                            repo._id as string,
-                            subDepVersion as string,
-                            installedDep._id as string,
-                            'dependency',
-                        );
-                    }
-                }
-
-                if (dependencyData.peerDependencies) {
-                    for (const [subDep, subDepVersion] of Object.entries(
-                        dependencyData.peerDependencies,
-                    )) {
-                        // await this.registerSubDependency(
-                        //     subDep,
-                        //     repo._id as string,
-                        //     subDepVersion as string,
-                        //     installedDep._id as string,
-                        //     'peerDependency',
-                        // );
-                        console.log(subDep, subDepVersion, 'sub');
-                    }
-                }
-            }
-        } catch (error) {
-            console.log(error);
-        }
-    }
-
-    // async selectRepo(urlId: string) {
+    // async selectRepoDemo(urlId: string) {
     //     // Find the repository by ID and ensure it's not deleted
-    //     const repo = await this.RepositoryModel.findOne(
-    //         { _id: urlId, isDeleted: false },
-    //         { _id: 1, repoUrl: 1, githubApp: 1 },
-    //     ).populate('githubApp');
+    //     const repo = { _id: '67c7ad1743029bcbed4be37b' };
 
     //     // If the repository is not found, throw an error
-    //     if (!repo) {
-    //         throw new NotFoundException(
-    //             `Repository not found or deleted: ${urlId}`,
-    //         );
-    //     }
+    //     // if (!repo) {
+    //     //     throw new NotFoundException(
+    //     //         `Repository not found or deleted: ${urlId}`,
+    //     //     );
+    //     // }
 
     //     // console.log(repo);
 
-    //     const accessToken = await this.githubAppService.createInstallationToken(
-    //         repo.githubApp.installationId,
-    //     );
+    //     // const accessToken = await this.githubAppService.createInstallationToken(
+    //     //     repo.githubApp.installationId,
+    //     // );
 
     //     try {
-    //         const response = await firstValueFrom(
-    //             this.httpService.get(
-    //                 `${repo.repoUrl}/contents/package-lock.json`,
-    //                 {
-    //                     headers: {
-    //                         Authorization: `Bearer ${accessToken}`,
-    //                         Accept: 'application/vnd.github.v3+json',
-    //                         'X-GitHub-Api-Version': '2022-11-28',
-    //                     },
-    //                 },
-    //             ),
-    //         );
+    //         // const response = await firstValueFrom(
+    //         //     this.httpService.get(
+    //         //         `${repo.repoUrl}/contents/package-lock.json`,
+    //         //         {
+    //         //             headers: {
+    //         //                 Authorization: `Bearer ${accessToken}`,
+    //         //                 Accept: 'application/vnd.github.v3+json',
+    //         //                 'X-GitHub-Api-Version': '2022-11-28',
+    //         //             },
+    //         //         },
+    //         //     ),
+    //         // );
 
-    //         const dependencyFile = response.data;
-    //         const dependencyFileContentDecoded = atob(dependencyFile.content);
-    //         const dependencyObj = JSON.parse(dependencyFileContentDecoded);
+    //         // const dependencyFile = response.data;
+    //         // const dependencyFileContentDecoded = atob(dependencyFile.content);
+    //         // const dependencyObj = JSON.parse(dependencyFileContentDecoded);
+    //         const dependencyObj = await this.getDependencyFileContent();
     //         const allDependencies: [string, any][] = Object.entries(
     //             dependencyObj['packages'],
     //         );
@@ -473,11 +346,12 @@ export class RepositoryService {
     //                 dependencyVersion[packageName] = [];
     //             }
 
-    //             // if (!dependencyVersion[packageName].includes(packageVersion)) {
+    //             //if (!dependencyVersion[packageName].includes(packageVersion)) {
     //             dependencyVersion[packageName].push(packageVersion);
     //             const installedDep = await this.dependencyService.create({
     //                 dependencyName: packageName,
     //             });
+    //             // const installedDep = { _id: '67c7ad1743029bcbed4be37b' };
     //             dependencyRepo = await this.DependencyRepositoryModel.findOne({
     //                 dependencyId: installedDep._id,
     //                 repositoryId: repo._id,
@@ -490,13 +364,16 @@ export class RepositoryService {
     //                         repositoryId: repo._id,
     //                         installedVersion: packageVersion,
     //                     });
+    //                 console.log('creating');
     //             }
     //             //}
-
+    //             console.log(packageName, packageVersion, installedDep._id);
     //             if (dependencyData.dependencies) {
     //                 for (const [subDep, subDepVersion] of Object.entries(
     //                     dependencyData.dependencies,
     //                 )) {
+    //                     console.log(subDep, subDepVersion, 'sub');
+
     //                     await this.registerSubDependency(
     //                         subDep,
     //                         repo._id as string,
@@ -509,30 +386,139 @@ export class RepositoryService {
 
     //             if (dependencyData.peerDependencies) {
     //                 for (const [subDep, subDepVersion] of Object.entries(
-    //                     dependencyData.dependencies,
+    //                     dependencyData.peerDependencies,
     //                 )) {
-    //                     await this.registerSubDependency(
-    //                         subDep,
-    //                         repo._id as string,
-    //                         subDepVersion as string,
-    //                         installedDep._id as string,
-    //                         'peerDependency',
-    //                     );
+    //                     // await this.registerSubDependency(
+    //                     //     subDep,
+    //                     //     repo._id as string,
+    //                     //     subDepVersion as string,
+    //                     //     installedDep._id as string,
+    //                     //     'peerDependency',
+    //                     // );
+    //                     console.log(subDep, subDepVersion, 'sub');
     //                 }
     //             }
     //         }
-
-    //         console.log(allDependencies);
     //     } catch (error) {
     //         console.log(error);
     //     }
-
-    //     // Update the repository to mark it as selected
-    //     return await this.RepositoryModel.updateOne(
-    //         { _id: urlId },
-    //         { $set: { isSelected: true } },
-    //     );
     // }
+
+    async selectRepo(urlId: string) {
+        // Find the repository by ID and ensure it's not deleted
+        const repo = await this.RepositoryModel.findOne(
+            { _id: urlId, isDeleted: false },
+            { _id: 1, repoUrl: 1, githubApp: 1 },
+        ).populate('githubApp');
+
+        // If the repository is not found, throw an error
+        if (!repo) {
+            throw new NotFoundException(
+                `Repository not found or deleted: ${urlId}`,
+            );
+        }
+
+        // console.log(repo);
+
+        const accessToken = await this.githubAppService.createInstallationToken(
+            repo.githubApp.installationId,
+        );
+
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(
+                    `${repo.repoUrl}/contents/package-lock.json`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: 'application/vnd.github.v3+json',
+                            'X-GitHub-Api-Version': '2022-11-28',
+                        },
+                    },
+                ),
+            );
+
+            const dependencyFile = response.data;
+            const dependencyFileContentDecoded = atob(dependencyFile.content);
+            const dependencyObj = JSON.parse(dependencyFileContentDecoded);
+            const allDependencies: [string, any][] = Object.entries(
+                dependencyObj['packages'],
+            );
+            const dependencyVersion = {};
+
+            // allDependencies.forEach((dep) => {
+            //     dependencyVersion[dep] = dependencyObj['packages'][dep].version;
+            // });
+
+            for (const [dependency, dependencyData] of allDependencies) {
+                if (!dependency) continue;
+
+                const packageName = this.getPackageName(dependency);
+                const packageVersion = dependencyData.version;
+                let dependencyRepo;
+
+                if (!dependencyVersion[packageName]) {
+                    dependencyVersion[packageName] = [];
+                }
+
+                // if (!dependencyVersion[packageName].includes(packageVersion)) {
+                dependencyVersion[packageName].push(packageVersion);
+                const installedDep = await this.dependencyService.create({
+                    dependencyName: packageName,
+                });
+                dependencyRepo = await this.DependencyRepositoryModel.findOne({
+                    dependencyId: installedDep._id,
+                    repositoryId: repo._id,
+                    installedVersion: packageVersion,
+                });
+                if (!dependencyRepo) {
+                    dependencyRepo =
+                        await this.DependencyRepositoryModel.create({
+                            dependencyId: installedDep._id,
+                            repositoryId: repo._id,
+                            installedVersion: packageVersion,
+                        });
+                }
+                //}
+
+                if (dependencyData.dependencies) {
+                    for (const [subDep, subDepVersion] of Object.entries(
+                        dependencyData.dependencies,
+                    )) {
+                        await this.registerSubDependency(
+                            subDep,
+                            repo._id as string,
+                            subDepVersion as string,
+                            installedDep._id as string,
+                            'dependency',
+                        );
+                    }
+                }
+
+                if (dependencyData.peerDependencies) {
+                    for (const [subDep, subDepVersion] of Object.entries(
+                        dependencyData.dependencies,
+                    )) {
+                        await this.registerSubDependency(
+                            subDep,
+                            repo._id as string,
+                            subDepVersion as string,
+                            installedDep._id as string,
+                            'peerDependency',
+                        );
+                    }
+                }
+            }
+        } catch (error) {
+            console.log(error);
+        }
+
+        // Update the repository to mark it as selected
+        return await this.RepositoryModel.updateOne(
+            { _id: urlId },
+            { $set: { isSelected: true } },
+        );
+    }
 
     private async registerSubDependency(
         subDep: string,
@@ -737,8 +723,8 @@ export class RepositoryService {
         const repository = await this.RepositoryModel.findOne({
             _id: new Types.ObjectId(repoId),
             user: new Types.ObjectId(userId),
-            isDeleted: false,
-        }).populate('githubApp');
+            //isDeleted: false,
+        });
 
         if (!repository) {
             throw new NotFoundException('Repository not found.');
@@ -760,9 +746,9 @@ export class RepositoryService {
                     as: 'dependency',
                 },
             },
-            // {
-            //     $unwind: '$dependency',
-            // },
+            {
+                $unwind: '$dependency',
+            },
             {
                 $lookup: {
                     from: 'licenses',
@@ -780,7 +766,7 @@ export class RepositoryService {
             {
                 $group: {
                     _id: '$dependency.license',
-                    count: { $sum: 1 },
+                    dependencyCount: { $sum: 1 },
                     licenseRisk: {
                         $first: '$licenseDetails.useCase.licenseRisk',
                     },
@@ -793,48 +779,24 @@ export class RepositoryService {
                 $project: {
                     _id: 0,
                     license: '$_id',
-                    count: 1,
+                    dependencyCount: 1,
                     licenseRisk: { $ifNull: ['$licenseRisk', null] },
                     licenseFamily: { $ifNull: ['$licenseFamily', null] },
                 },
             },
             {
-                $skip: (page - 1) * limit,
-            },
-            {
-                $limit: limit,
+                $facet: {
+                    metadata: [{ $count: 'total' }], // Get the total count of groups
+                    data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+                },
             },
         ];
 
-        const licensesWithCount =
-            await this.DependencyRepositoryModel.aggregate(pipeline);
+        const result = await this.DependencyRepositoryModel.aggregate(pipeline);
+        const data = result[0].data;
+        const totalCount =
+            result[0].metadata.length > 0 ? result[0].metadata[0].total : 0;
 
-        // Get total count for pagination
-        // const totalCountPipeline = [
-        //     {
-        //         $match: {
-        //             repositoryId: new Types.ObjectId(repoId),
-        //             installedVersion: { $ne: null },
-        //         },
-        //     },
-        //     {
-        //         $group: {
-        //             _id: '$dependency.license',
-        //         },
-        //     },
-        //     {
-        //         $count: 'totalCount',
-        //     },
-        // ];
-
-        // const totalCountResult =
-        //     await this.DependencyRepositoryModel.aggregate(totalCountPipeline);
-        // const totalCount =
-        //     totalCountResult.length > 0 ? totalCountResult[0].totalCount : 0;
-
-        return {
-            licenses: licensesWithCount,
-            totalCount: 0,
-        };
+        return { data, totalCount };
     }
 }
