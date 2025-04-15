@@ -281,7 +281,7 @@ export class VulnerabilitiesService {
         }
     }
 
-    async createVulnerability() {}
+    async createVulnerability(dependencyRepos: string[]) {}
 
     async getVulnerabilityInfoFromOSV(
         dependencyName: string,
