@@ -463,6 +463,8 @@ export class RepositoryService {
 
                 // if (!dependencyVersion[packageName].includes(packageVersion)) {
                 dependencyVersion[packageName].push(packageVersion);
+
+                // adding dependencies to the queue to be processed
                 const installedDep = await this.dependencyService.create({
                     dependencyName: packageName,
                 });
@@ -713,6 +715,23 @@ export class RepositoryService {
         }
     }
 
+    async getRepositoryByUserId(userId: string, repoId: string) {
+        const repository = await this.RepositoryModel.findOne({
+            _id: new Types.ObjectId(repoId),
+            user: new Types.ObjectId(userId),
+        });
+
+        return repository;
+    }
+
+    async getInstalledDependenciesByRepoId(repoId: string) {
+        const dependencies = await this.DependencyRepositoryModel.find({
+            repositoryId: new Types.ObjectId(repoId),
+            installedVersion: { $ne: null },
+        }).populate('dependencyId');
+        return dependencies;
+    }
+
     async getLicensesWithDependencyCount(
         userId: string,
         repoId: string,
@@ -720,11 +739,7 @@ export class RepositoryService {
         limit = 10,
     ) {
         // Fetch the repository by userId and repoId
-        const repository = await this.RepositoryModel.findOne({
-            _id: new Types.ObjectId(repoId),
-            user: new Types.ObjectId(userId),
-            //isDeleted: false,
-        });
+        const repository = await this.getRepositoryByUserId(userId, repoId);
 
         if (!repository) {
             throw new NotFoundException('Repository not found.');

@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
 import { CreateVulnerabilityDTO } from './dto/create-vulnerability.dto';
@@ -15,6 +23,16 @@ export class VulnerabilitiesController {
     @UseGuards(AccessTokenGuard)
     create(@Body() createVulnerabilityDTO: CreateVulnerabilityDTO) {
         return this.vulnerabilitiesService.create(createVulnerabilityDTO);
+    }
+
+    @Post('scan-repo/:repoId')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    scanVulnerabilities(@Param('repoId') repoId: string, @Req() req: Request) {
+        return this.vulnerabilitiesService.createVulnerability(
+            req['user'].userId,
+            repoId,
+        );
     }
 
     @Get('cveId/:cveId')

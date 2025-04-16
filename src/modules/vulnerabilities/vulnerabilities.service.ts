@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
@@ -15,6 +15,7 @@ import {
     VulnerabilityDocument,
 } from 'src/database/vulnerability-schema/vulnerability.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
+import { RepositoryService } from '../repository/repository.service';
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -24,6 +25,7 @@ export class VulnerabilitiesService {
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
         private readonly dependenciesService: DependenciesService,
+        private readonly repositoryService: RepositoryService,
         @InjectQueue('vulnerabilities') private vulnerabilityQueue: Queue,
         @InjectModel(Vulnerability.name)
         private vulnerabilityModel: Model<VulnerabilityDocument>,
@@ -95,7 +97,7 @@ export class VulnerabilitiesService {
     }
 
     parseOSVData(data: any) {
-        return data.vulns.map((vuln) => ({
+        return data.vulns?.map((vuln) => ({
             id: vuln.id,
             summary: vuln.summary,
             details: vuln.details,
@@ -281,7 +283,31 @@ export class VulnerabilitiesService {
         }
     }
 
-    async createVulnerability(dependencyRepos: string[]) {}
+    async createVulnerability(userId: string, repoId: string) {
+        const repository = await this.repositoryService.getRepositoryByUserId(
+            userId,
+            repoId,
+        );
+
+        if (!repository) {
+            throw new NotFoundException('Repository not found.');
+        }
+
+        const dependencies =
+            await this.repositoryService.getInstalledDependenciesByRepoId(
+                repoId,
+            );
+
+        for (const dep of dependencies) {
+            if (dep.dependencyId) {
+                await this.getVulnerabilityInfoFromOSV(
+                    dep.dependencyId?.['dependencyName'],
+                    'npm',
+                );
+            }
+        }
+        return dependencies;
+    }
 
     async getVulnerabilityInfoFromOSV(
         dependencyName: string,
