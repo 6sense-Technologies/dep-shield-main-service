@@ -59,8 +59,9 @@ export class GithubAppService {
       const githubInstallationAccessToken = tokenResponse.data.token;
       console.log(`Installation access token ${githubInstallationAccessToken}`);
       return githubInstallationAccessToken;
-    } catch {
+    } catch (error) {
       console.log(`Error creating app installation token...`);
+      console.log(error.message);
     }
   }
   private async fetchAllRepos(user: any) {

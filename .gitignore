@@ -132,3 +132,5 @@ dist
 pkey.pem
 private-key.pem
 .vercel
+
+spdx.json
