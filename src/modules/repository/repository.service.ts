@@ -12,7 +12,7 @@ import { firstValueFrom } from 'rxjs';
 import {
     DependencyRepository,
     DependencyRepositoryDocument,
-} from 'src/database/dependency-repository-schema/dependency-repository.schema';
+} from '../../database/dependency-repository-schema/dependency-repository.schema';
 import {
     GithubApp,
     GithubAppDocument,

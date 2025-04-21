@@ -9,11 +9,11 @@ import { firstValueFrom } from 'rxjs';
 import {
     VulnerabilityVersion,
     VulnerabilityVersionDocument,
-} from 'src/database/vulnerability-schema/vulnerability-version.schema';
+} from '../../database/vulnerability-schema/vulnerability-version.schema';
 import {
     Vulnerability,
     VulnerabilityDocument,
-} from 'src/database/vulnerability-schema/vulnerability.schema';
+} from '../../database/vulnerability-schema/vulnerability.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
 import { RepositoryService } from '../repository/repository.service';
 

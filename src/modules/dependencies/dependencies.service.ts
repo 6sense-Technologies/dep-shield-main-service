@@ -13,11 +13,11 @@ import { firstValueFrom } from 'rxjs';
 import {
     DependencyVersion,
     DependencyVersionDocument,
-} from 'src/database/dependency-schema/dependency-version.schema';
+} from '../../database/dependency-schema/dependency-version.schema';
 import {
     Dependency,
     DependencyDocument,
-} from 'src/database/dependency-schema/dependency.schema';
+} from '../../database/dependency-schema/dependency.schema';
 import { RepositoryService } from '../repository/repository.service';
 import { CreateDependencyDTO } from './dto/create-dependency.dto';
 
