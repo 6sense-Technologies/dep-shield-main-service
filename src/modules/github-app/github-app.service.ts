@@ -37,7 +37,7 @@ export class GithubAppService {
             process.env.GITHUB_PRIVATE_KEY,
             'base64',
         ).toString('utf8');
-        console.log(process.env.GITHUB_PRIVATE_KEY, process.env.GITHUB_APP_ID);
+        // console.log(process.env.GITHUB_PRIVATE_KEY, process.env.GITHUB_APP_ID);
 
         return jwt.sign(payload, privateKey, {
             algorithm: 'RS256',

@@ -513,6 +513,7 @@ export class RepositoryService {
             }
         } catch (error) {
             console.log(error);
+            throw new NotFoundException('Could not retrieve package-lock.json');
         }
 
         // Update the repository to mark it as selected
@@ -722,6 +723,14 @@ export class RepositoryService {
         });
 
         return repository;
+    }
+
+    async getDependencyRepoById(repoId: string) {
+        const dependencyRepo = await this.DependencyRepositoryModel.findOne({
+            _id: new Types.ObjectId(repoId),
+        }).populate('dependencyId');
+
+        return dependencyRepo;
     }
 
     async getInstalledDependenciesByRepoId(repoId: string) {

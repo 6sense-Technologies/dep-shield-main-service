@@ -51,6 +51,23 @@ export class DependenciesService {
         return dep;
     }
 
+    async findOne(dependencyId: string) {
+        if (!Types.ObjectId.isValid(dependencyId)) {
+            throw new NotFoundException(
+                `Dependency Not Found with id: ${dependencyId}`,
+            );
+        }
+        const dep = await this.dependencyModel.findOne({
+            _id: new Types.ObjectId(dependencyId),
+        });
+        if (dep) {
+            return dep;
+        }
+        throw new NotFoundException(
+            `Dependency Not Found with id: ${dependencyId}`,
+        );
+    }
+
     async getDependenciesByRepoId(repoId: string) {
         if (!repoId && !Types.ObjectId.isValid(repoId)) {
             throw new NotFoundException(`Repository ID is required`);

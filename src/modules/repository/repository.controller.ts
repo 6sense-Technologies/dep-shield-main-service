@@ -111,4 +111,11 @@ export class RepositoryController {
             req['user'].userId,
         );
     }
+
+    @UseGuards(AccessTokenGuard)
+    @ApiBearerAuth()
+    @Get('/dependencies/:depRepoId')
+    async getDependencyRepoById(@Param('depRepoId') depRepoId: string) {
+        return await this.repositoryService.getDependencyRepoById(depRepoId);
+    }
 }
