@@ -34,6 +34,9 @@ export class DependencyRepository {
         default: null,
     })
     parent: MongooseSchema.Types.ObjectId;
+
+    @Prop({ default: false })
+    isDeleted: boolean;
 }
 
 export const DependencyRepositorySchema =
