@@ -53,6 +53,17 @@ export class RepositoryController {
         );
     }
 
+    @Post('unselect-repo')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async unSelectRepo(
+        @Body() selectRepoUrlsSingleDTO: SelectRepoUrlSingleDTO,
+    ) {
+        return this.repositoryService.unSelectRepo(
+            selectRepoUrlsSingleDTO.selectedRepo,
+        );
+    }
+
     @Get('selected-repos')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)

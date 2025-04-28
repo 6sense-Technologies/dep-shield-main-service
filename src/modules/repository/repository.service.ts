@@ -523,6 +523,27 @@ export class RepositoryService {
         );
     }
 
+    async unSelectRepo(urlId: string) {
+        // Find the repository by ID and ensure it's not deleted
+        const repo = await this.RepositoryModel.findOne(
+            { _id: urlId, isDeleted: false },
+            { _id: 1 },
+        );
+
+        // If the repository is not found, throw an error
+        if (!repo) {
+            throw new NotFoundException(
+                `Repository not found or deleted: ${urlId}`,
+            );
+        }
+
+        // Update the repository to mark it as unselected
+        return await this.RepositoryModel.updateOne(
+            { _id: urlId },
+            { $set: { isSelected: false } },
+        );
+    }
+
     private async registerSubDependency(
         subDep: string,
         repoId: string,
