@@ -39,55 +39,55 @@ export class RepositoryService {
         @InjectModel(DependencyRepository.name)
         private DependencyRepositoryModel: Model<DependencyRepositoryDocument>,
     ) {}
-    onModuleInit() {
-        this.watchRepositorySelection(); // listent to db changes
-    }
-    private watchRepositorySelection() {
-        const changeStream = this.RepositoryModel.watch([
-            {
-                $match: {
-                    operationType: 'update',
-                    'updateDescription.updatedFields.isSelected': true, // listen to db changes when isSelected is equal to true
-                },
-            },
-        ]);
+    // onModuleInit() {
+    //     this.watchRepositorySelection(); // listent to db changes
+    // }
+    // private watchRepositorySelection() {
+    //     const changeStream = this.RepositoryModel.watch([
+    //         {
+    //             $match: {
+    //                 operationType: 'update',
+    //                 'updateDescription.updatedFields.isSelected': true, // listen to db changes when isSelected is equal to true
+    //             },
+    //         },
+    //     ]);
 
-        changeStream.on('change', async (change) => {
-            console.log(change);
+    //     changeStream.on('change', async (change) => {
+    //         console.log(change);
 
-            const { documentKey, updateDescription } = change;
-            console.log(
-                `Repository ID: ${documentKey._id}, isSelected: ${updateDescription.updatedFields.isSelected}`,
-            );
+    //         const { documentKey, updateDescription } = change;
+    //         console.log(
+    //             `Repository ID: ${documentKey._id}, isSelected: ${updateDescription.updatedFields.isSelected}`,
+    //         );
 
-            // Extract repository ID
-            const repoId = documentKey._id.toString();
+    //         // Extract repository ID
+    //         const repoId = documentKey._id.toString();
 
-            try {
-                // Fetch the full repository document
-                const repository = await this.RepositoryModel.findOne({
-                    _id: new Types.ObjectId(repoId),
-                })
-                    .populate('user') // Optionally populate user and other references
-                    .exec();
+    //         try {
+    //             // Fetch the full repository document
+    //             const repository = await this.RepositoryModel.findOne({
+    //                 _id: new Types.ObjectId(repoId),
+    //             })
+    //                 .populate('user') // Optionally populate user and other references
+    //                 .exec();
 
-                if (repository) {
-                    await this.saveDependencies(
-                        repository._id.toString(),
-                        repository.user['_id'].toString(),
-                    );
-                } else {
-                    console.log('Repository not found');
-                }
-            } catch (error) {
-                console.error('Error fetching repository:', error);
-            }
-        });
+    //             if (repository) {
+    //                 await this.saveDependencies(
+    //                     repository._id.toString(),
+    //                     repository.user['_id'].toString(),
+    //                 );
+    //             } else {
+    //                 console.log('Repository not found');
+    //             }
+    //         } catch (error) {
+    //             console.error('Error fetching repository:', error);
+    //         }
+    //     });
 
-        changeStream.on('error', (error) => {
-            console.error('Change Stream Error:', error);
-        });
-    }
+    //     changeStream.on('error', (error) => {
+    //         console.error('Change Stream Error:', error);
+    //     });
+    // }
 
     private getRepositoriesPipeline(
         userId: string,
