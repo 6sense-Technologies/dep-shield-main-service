@@ -404,17 +404,17 @@ export class RepositoryService {
     //     }
     // }
 
-    async selectRepo(urlId: string) {
+    async scanRepo(repoId: string) {
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
-            { _id: urlId, isDeleted: false },
+            { _id: repoId, isDeleted: false },
             { _id: 1, repoUrl: 1, githubApp: 1 },
         ).populate('githubApp');
 
         // If the repository is not found, throw an error
         if (!repo) {
             throw new NotFoundException(
-                `Repository not found or deleted: ${urlId}`,
+                `Repository not found or deleted: ${repoId}`,
             );
         }
 
@@ -516,9 +516,33 @@ export class RepositoryService {
             throw new NotFoundException('Could not retrieve package-lock.json');
         }
 
-        // Update the repository to mark it as selected
+        return {
+            message:
+                'Dependencies scanned successfully. It will take some time to process',
+        };
+    }
+
+    async removeDependencyReposByRepoId(repoId: string) {
+        return await this.DependencyRepositoryModel.updateMany(
+            { repositoryId: new Types.ObjectId(repoId) },
+            { $set: { isDeleted: true } },
+        );
+    }
+
+    async selectRepo(repoId: string) {
+        const repo = await this.RepositoryModel.findOne(
+            { _id: repoId, isDeleted: false },
+            { _id: 1, repoUrl: 1, githubApp: 1 },
+        ).populate('githubApp');
+
+        if (!repo) {
+            throw new NotFoundException(
+                `Repository not found or deleted: ${repoId}`,
+            );
+        }
+
         return await this.RepositoryModel.updateOne(
-            { _id: urlId },
+            { _id: repoId },
             { $set: { isSelected: true } },
         );
     }
@@ -762,6 +786,16 @@ export class RepositoryService {
         return dependencies;
     }
 
+    // need to be uncommented when the function is used to update all dependencies to not deleted
+    // async updateAllDependencyRepo() {
+    //     return await this.DependencyRepositoryModel.updateMany(
+    //         {},
+    //         {
+    //             $set: { isDeleted: false },
+    //         },
+    //     );
+    // }
+
     async getLicensesWithDependencyCount(
         userId: string,
         repoId: string,
@@ -781,6 +815,7 @@ export class RepositoryService {
                 $match: {
                     repositoryId: new Types.ObjectId(repoId),
                     installedVersion: { $ne: null },
+                    isDeleted: false,
                 },
             },
             {

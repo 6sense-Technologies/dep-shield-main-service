@@ -4,6 +4,7 @@ import {
     Get,
     Param,
     Post,
+    Put,
     Query,
     Req,
     UseGuards,
@@ -49,6 +50,15 @@ export class RepositoryController {
     @UseGuards(AccessTokenGuard)
     async selectRepo(@Body() selectRepoUrlsSingleDTO: SelectRepoUrlSingleDTO) {
         return this.repositoryService.selectRepo(
+            selectRepoUrlsSingleDTO.selectedRepo,
+        );
+    }
+
+    @Post('scan-repo')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async scanRepo(@Body() selectRepoUrlsSingleDTO: SelectRepoUrlSingleDTO) {
+        return this.repositoryService.scanRepo(
             selectRepoUrlsSingleDTO.selectedRepo,
         );
     }
@@ -129,4 +139,9 @@ export class RepositoryController {
     async getDependencyRepoById(@Param('depRepoId') depRepoId: string) {
         return await this.repositoryService.getDependencyRepoById(depRepoId);
     }
+
+    // @Put('dependency-repo/make-active')
+    // async makeActiveDependencyRepo() {
+    //     return await this.repositoryService.updateAllDependencyRepo();
+    // }
 }
