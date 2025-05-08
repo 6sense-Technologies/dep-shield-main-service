@@ -23,6 +23,7 @@ import {
 @Controller('repositories')
 export class RepositoryController {
     constructor(private repositoryService: RepositoryService) {}
+
     @Get('repos')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
@@ -45,6 +46,7 @@ export class RepositoryController {
             selectRepoUrlsDTO.selectedRepos,
         );
     }
+
     @Post('select-repo')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)

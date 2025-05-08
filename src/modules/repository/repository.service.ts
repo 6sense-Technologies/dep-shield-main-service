@@ -141,8 +141,11 @@ export class RepositoryService {
             },
         ];
     }
-    async getAllRepos(userId: string, page = 1, limit = 10) {
+    async getAllRepos(userId: string, page: number, limit: number) {
         const user = await this.userModel.findById(userId).exec();
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
         const { pageNum, limitNum } = validatePagination(page, limit);
 
         const skipVal = (pageNum - 1) * limitNum;
@@ -547,23 +550,23 @@ export class RepositoryService {
         );
     }
 
-    async unSelectRepo(urlId: string) {
+    async unSelectRepo(repoId: string) {
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
-            { _id: urlId, isDeleted: false },
+            { _id: repoId, isDeleted: false },
             { _id: 1 },
         );
 
         // If the repository is not found, throw an error
         if (!repo) {
             throw new NotFoundException(
-                `Repository not found or deleted: ${urlId}`,
+                `Repository not found or deleted: ${repoId}`,
             );
         }
 
         // Update the repository to mark it as unselected
         return await this.RepositoryModel.updateOne(
-            { _id: urlId },
+            { _id: repoId },
             { $set: { isSelected: false } },
         );
     }
@@ -595,7 +598,11 @@ export class RepositoryService {
         });
     }
 
-    async selectedRepos(page = 1, limit = 10, userId: string) {
+    async selectedRepos(page: number, limit: number, userId: string) {
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+
         const user = await this.userModel.findById(userId).exec();
         const { pageNum, limitNum } = validatePagination(page, limit);
         const skipVal = (pageNum - 1) * limitNum;
@@ -623,6 +630,7 @@ export class RepositoryService {
             totalCount: totalCountResult,
         };
     }
+
     async selectAll(userId: string) {
         const response = await this.RepositoryModel.updateMany(
             { user: new Types.ObjectId(userId), isDeleted: false },
@@ -632,6 +640,7 @@ export class RepositoryService {
         );
         return response;
     }
+
     formatDependencies(dependencies: Record<string, string>) {
         return Object.entries(dependencies).map(([pkg, version]) => ({
             package: pkg,
@@ -641,6 +650,7 @@ export class RepositoryService {
                     : '',
         }));
     }
+
     async saveDependencies(repoId: string, userId: string) {
         const repository = await this.RepositoryModel.findOne({
             _id: new Types.ObjectId(repoId),
@@ -719,6 +729,7 @@ export class RepositoryService {
             throw new NotFoundException('Could not retrieve package.json');
         }
     }
+
     async readDependencies(repoId: string, userId: string) {
         const repository = await this.RepositoryModel.findOne({
             _id: new Types.ObjectId(repoId),
@@ -799,10 +810,13 @@ export class RepositoryService {
     async getLicensesWithDependencyCount(
         userId: string,
         repoId: string,
-        page = 1,
-        limit = 10,
+        page: number,
+        limit: number,
     ) {
-        // Fetch the repository by userId and repoId
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+
         const repository = await this.getRepositoryByUserId(userId, repoId);
 
         if (!repository) {
