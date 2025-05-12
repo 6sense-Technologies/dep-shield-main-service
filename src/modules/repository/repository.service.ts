@@ -412,7 +412,9 @@ export class RepositoryService {
         const repo = await this.RepositoryModel.findOne(
             { _id: repoId, isDeleted: false },
             { _id: 1, repoUrl: 1, githubApp: 1 },
-        ).populate('githubApp');
+        )
+            .populate('githubApp')
+            .lean();
 
         // If the repository is not found, throw an error
         if (!repo) {
@@ -581,21 +583,31 @@ export class RepositoryService {
         const installedSubDep = await this.dependencyService.create({
             dependencyName: subDep,
         });
-        console.log('dependency install. trying for repo');
-        console.log(
-            subDep,
-            repoId,
-            subDepVersion,
-            parentDependencyId,
-            installedSubDep._id,
-        );
-        await this.DependencyRepositoryModel.create({
-            dependencyId: new Types.ObjectId(installedSubDep._id as string),
+        // console.log('dependency install. trying for repo');
+        // console.log(
+        //     subDep,
+        //     repoId,
+        //     subDepVersion,
+        //     parentDependencyId,
+        //     installedSubDep._id,
+        // );
+        const depRepObj = {
+            dependencyId: installedSubDep._id, // new Types.ObjectId(installedSubDep._id as string),
             repositoryId: new Types.ObjectId(repoId),
             requiredVersion: subDepVersion,
             parent: new Types.ObjectId(parentDependencyId),
             dependencyType: dependencyType,
-        });
+        };
+        await this.DependencyRepositoryModel.findOneAndUpdate(
+            depRepObj,
+            {
+                $set: { ...depRepObj, isDeleted: false },
+            },
+            {
+                upsert: true,
+                new: true,
+            },
+        ).lean();
     }
 
     async selectedRepos(page: number, limit: number, userId: string) {
