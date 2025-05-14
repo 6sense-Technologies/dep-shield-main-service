@@ -35,14 +35,17 @@ export class DependenciesService {
     ) {}
 
     async create(createDependencyDTO: CreateDependencyDTO) {
-        const dep = await this.dependencyModel.findOneAndUpdate(
-            createDependencyDTO,
-            { $set: createDependencyDTO },
-            {
-                upsert: true,
-                new: true,
-            },
-        );
+        const dep = await this.dependencyModel
+            .findOneAndUpdate(
+                createDependencyDTO,
+                { $set: createDependencyDTO },
+                {
+                    upsert: true,
+                    new: true,
+                },
+            )
+            .lean();
+
         await this.dependencyQueue.add('get-dependency-info', dep, {
             delay: 1000,
             attempts: 2,
@@ -59,7 +62,7 @@ export class DependenciesService {
         }
         const dep = await this.dependencyModel.findOne({
             _id: new Types.ObjectId(dependencyId),
-        });
+        }).lean();
         if (dep) {
             return dep;
         }
@@ -98,7 +101,7 @@ export class DependenciesService {
         return await this.dependencyVersionModel.findOne({
             dependencyId: new Types.ObjectId(dependencyId),
             version: version,
-        });
+        }).lean();
     }
 
     async getVersionsInPublishRange(
@@ -109,7 +112,7 @@ export class DependenciesService {
         return await this.dependencyVersionModel.find({
             dependencyId: new Types.ObjectId(dependencyId),
             publishDate: { $gt: introducedVersionDate, $lt: fixedVersionDate },
-        });
+        }).lean();
     }
 
     async getDetails(dependencyId: string) {

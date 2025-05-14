@@ -141,8 +141,11 @@ export class RepositoryService {
             },
         ];
     }
-    async getAllRepos(userId: string, page = 1, limit = 10) {
+    async getAllRepos(userId: string, page: number, limit: number) {
         const user = await this.userModel.findById(userId).exec();
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
         const { pageNum, limitNum } = validatePagination(page, limit);
 
         const skipVal = (pageNum - 1) * limitNum;
@@ -404,17 +407,19 @@ export class RepositoryService {
     //     }
     // }
 
-    async selectRepo(urlId: string) {
+    async scanRepo(repoId: string) {
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
-            { _id: urlId, isDeleted: false },
+            { _id: repoId, isDeleted: false },
             { _id: 1, repoUrl: 1, githubApp: 1 },
-        ).populate('githubApp');
+        )
+            .populate('githubApp')
+            .lean();
 
         // If the repository is not found, throw an error
         if (!repo) {
             throw new NotFoundException(
-                `Repository not found or deleted: ${urlId}`,
+                `Repository not found or deleted: ${repoId}`,
             );
         }
 
@@ -516,30 +521,65 @@ export class RepositoryService {
             throw new NotFoundException('Could not retrieve package-lock.json');
         }
 
-        // Update the repository to mark it as selected
+        return {
+            message:
+                'Dependencies scanned successfully. It will take some time to process',
+        };
+    }
+
+    async removeDependencyReposByRepoId(repoId: string) {
+        return await this.DependencyRepositoryModel.updateMany(
+            { repositoryId: new Types.ObjectId(repoId) },
+            { $set: { isDeleted: true } },
+        );
+    }
+
+    async addDependencyReposByRepoId(repoId: string) {
+        return await this.DependencyRepositoryModel.updateMany(
+            { repositoryId: new Types.ObjectId(repoId) },
+            { $set: { isDeleted: false } },
+        );
+    }
+
+    async selectRepo(repoId: string) {
+        const repo = await this.RepositoryModel.findOne(
+            { _id: repoId, isDeleted: false },
+            { _id: 1, repoUrl: 1, githubApp: 1 },
+        ).populate('githubApp');
+
+        if (!repo) {
+            throw new NotFoundException(
+                `Repository not found or deleted: ${repoId}`,
+            );
+        }
+
+        await this.addDependencyReposByRepoId(repoId);
+
         return await this.RepositoryModel.updateOne(
-            { _id: urlId },
+            { _id: repoId },
             { $set: { isSelected: true } },
         );
     }
 
-    async unSelectRepo(urlId: string) {
+    async unSelectRepo(repoId: string) {
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
-            { _id: urlId, isDeleted: false },
+            { _id: repoId, isDeleted: false },
             { _id: 1 },
         );
 
         // If the repository is not found, throw an error
         if (!repo) {
             throw new NotFoundException(
-                `Repository not found or deleted: ${urlId}`,
+                `Repository not found or deleted: ${repoId}`,
             );
         }
 
+        await this.removeDependencyReposByRepoId(repoId);
+
         // Update the repository to mark it as unselected
         return await this.RepositoryModel.updateOne(
-            { _id: urlId },
+            { _id: repoId },
             { $set: { isSelected: false } },
         );
     }
@@ -554,24 +594,38 @@ export class RepositoryService {
         const installedSubDep = await this.dependencyService.create({
             dependencyName: subDep,
         });
-        console.log('dependency install. trying for repo');
-        console.log(
-            subDep,
-            repoId,
-            subDepVersion,
-            parentDependencyId,
-            installedSubDep._id,
-        );
-        await this.DependencyRepositoryModel.create({
-            dependencyId: new Types.ObjectId(installedSubDep._id as string),
+        // console.log('dependency install. trying for repo');
+        // console.log(
+        //     subDep,
+        //     repoId,
+        //     subDepVersion,
+        //     parentDependencyId,
+        //     installedSubDep._id,
+        // );
+        const depRepObj = {
+            dependencyId: installedSubDep._id, // new Types.ObjectId(installedSubDep._id as string),
             repositoryId: new Types.ObjectId(repoId),
             requiredVersion: subDepVersion,
             parent: new Types.ObjectId(parentDependencyId),
             dependencyType: dependencyType,
-        });
+        };
+        await this.DependencyRepositoryModel.findOneAndUpdate(
+            depRepObj,
+            {
+                $set: { ...depRepObj, isDeleted: false },
+            },
+            {
+                upsert: true,
+                new: true,
+            },
+        ).lean();
     }
 
-    async selectedRepos(page = 1, limit = 10, userId: string) {
+    async selectedRepos(page: number, limit: number, userId: string) {
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+
         const user = await this.userModel.findById(userId).exec();
         const { pageNum, limitNum } = validatePagination(page, limit);
         const skipVal = (pageNum - 1) * limitNum;
@@ -599,6 +653,7 @@ export class RepositoryService {
             totalCount: totalCountResult,
         };
     }
+
     async selectAll(userId: string) {
         const response = await this.RepositoryModel.updateMany(
             { user: new Types.ObjectId(userId), isDeleted: false },
@@ -608,6 +663,7 @@ export class RepositoryService {
         );
         return response;
     }
+
     formatDependencies(dependencies: Record<string, string>) {
         return Object.entries(dependencies).map(([pkg, version]) => ({
             package: pkg,
@@ -617,6 +673,7 @@ export class RepositoryService {
                     : '',
         }));
     }
+
     async saveDependencies(repoId: string, userId: string) {
         const repository = await this.RepositoryModel.findOne({
             _id: new Types.ObjectId(repoId),
@@ -695,6 +752,7 @@ export class RepositoryService {
             throw new NotFoundException('Could not retrieve package.json');
         }
     }
+
     async readDependencies(repoId: string, userId: string) {
         const repository = await this.RepositoryModel.findOne({
             _id: new Types.ObjectId(repoId),
@@ -762,13 +820,26 @@ export class RepositoryService {
         return dependencies;
     }
 
+    // need to be uncommented when the function is used to update all dependencies to not deleted
+    // async updateAllDependencyRepo() {
+    //     return await this.DependencyRepositoryModel.updateMany(
+    //         {},
+    //         {
+    //             $set: { isDeleted: false },
+    //         },
+    //     );
+    // }
+
     async getLicensesWithDependencyCount(
         userId: string,
         repoId: string,
-        page = 1,
-        limit = 10,
+        page: number,
+        limit: number,
     ) {
-        // Fetch the repository by userId and repoId
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+
         const repository = await this.getRepositoryByUserId(userId, repoId);
 
         if (!repository) {
@@ -781,6 +852,7 @@ export class RepositoryService {
                 $match: {
                     repositoryId: new Types.ObjectId(repoId),
                     installedVersion: { $ne: null },
+                    isDeleted: false,
                 },
             },
             {
