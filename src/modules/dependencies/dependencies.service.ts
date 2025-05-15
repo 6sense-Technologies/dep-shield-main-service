@@ -74,7 +74,7 @@ export class DependenciesService {
     }
 
     async getDependenciesByRepoId(repoId: string) {
-        if (isValidObjectId(repoId)) {
+        if (!isValidObjectId(repoId)) {
             throw new NotFoundException(`Repository ID is required`);
         }
         const dependencies =
