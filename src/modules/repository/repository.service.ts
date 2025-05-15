@@ -534,6 +534,13 @@ export class RepositoryService {
         );
     }
 
+    async addDependencyReposByRepoId(repoId: string) {
+        return await this.DependencyRepositoryModel.updateMany(
+            { repositoryId: new Types.ObjectId(repoId) },
+            { $set: { isDeleted: false } },
+        );
+    }
+
     async selectRepo(repoId: string) {
         const repo = await this.RepositoryModel.findOne(
             { _id: repoId, isDeleted: false },
@@ -545,6 +552,8 @@ export class RepositoryService {
                 `Repository not found or deleted: ${repoId}`,
             );
         }
+
+        await this.addDependencyReposByRepoId(repoId);
 
         return await this.RepositoryModel.updateOne(
             { _id: repoId },
@@ -565,6 +574,8 @@ export class RepositoryService {
                 `Repository not found or deleted: ${repoId}`,
             );
         }
+
+        await this.removeDependencyReposByRepoId(repoId);
 
         // Update the repository to mark it as unselected
         return await this.RepositoryModel.updateOne(
