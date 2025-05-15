@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import {
     DependencyVersion,
@@ -60,9 +60,11 @@ export class DependenciesService {
                 `Dependency Not Found with id: ${dependencyId}`,
             );
         }
-        const dep = await this.dependencyModel.findOne({
-            _id: new Types.ObjectId(dependencyId),
-        }).lean();
+        const dep = await this.dependencyModel
+            .findOne({
+                _id: new Types.ObjectId(dependencyId),
+            })
+            .lean();
         if (dep) {
             return dep;
         }
@@ -72,7 +74,7 @@ export class DependenciesService {
     }
 
     async getDependenciesByRepoId(repoId: string) {
-        if (!repoId && !Types.ObjectId.isValid(repoId)) {
+        if (!isValidObjectId(repoId)) {
             throw new NotFoundException(`Repository ID is required`);
         }
         const dependencies =
@@ -98,10 +100,12 @@ export class DependenciesService {
     }
 
     async getVersionByDepVersion(dependencyId: string, version: string) {
-        return await this.dependencyVersionModel.findOne({
-            dependencyId: new Types.ObjectId(dependencyId),
-            version: version,
-        }).lean();
+        return await this.dependencyVersionModel
+            .findOne({
+                dependencyId: new Types.ObjectId(dependencyId),
+                version: version,
+            })
+            .lean();
     }
 
     async getVersionsInPublishRange(
@@ -109,10 +113,15 @@ export class DependenciesService {
         introducedVersionDate: Date,
         fixedVersionDate: Date,
     ) {
-        return await this.dependencyVersionModel.find({
-            dependencyId: new Types.ObjectId(dependencyId),
-            publishDate: { $gt: introducedVersionDate, $lt: fixedVersionDate },
-        }).lean();
+        return await this.dependencyVersionModel
+            .find({
+                dependencyId: new Types.ObjectId(dependencyId),
+                publishDate: {
+                    $gt: introducedVersionDate,
+                    $lt: fixedVersionDate,
+                },
+            })
+            .lean();
     }
 
     async getDetails(dependencyId: string) {

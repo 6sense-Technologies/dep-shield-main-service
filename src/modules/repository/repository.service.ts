@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { readFileSync } from 'fs';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import {
     DependencyRepository,
@@ -408,6 +408,9 @@ export class RepositoryService {
     // }
 
     async scanRepo(repoId: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
             { _id: repoId, isDeleted: false },
@@ -542,6 +545,9 @@ export class RepositoryService {
     }
 
     async selectRepo(repoId: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
         const repo = await this.RepositoryModel.findOne(
             { _id: repoId, isDeleted: false },
             { _id: 1, repoUrl: 1, githubApp: 1 },
@@ -562,6 +568,9 @@ export class RepositoryService {
     }
 
     async unSelectRepo(repoId: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
             { _id: repoId, isDeleted: false },
@@ -805,6 +814,9 @@ export class RepositoryService {
     }
 
     async getDependencyRepoById(repoId: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
         const dependencyRepo = await this.DependencyRepositoryModel.findOne({
             _id: new Types.ObjectId(repoId),
         }).populate('dependencyId');
@@ -838,6 +850,10 @@ export class RepositoryService {
     ) {
         if (!page || !limit) {
             throw new BadRequestException('Page and limit are required');
+        }
+
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
         }
 
         const repository = await this.getRepositoryByUserId(userId, repoId);
