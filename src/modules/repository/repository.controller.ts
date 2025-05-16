@@ -136,7 +136,7 @@ export class RepositoryController {
 
     @UseGuards(AccessTokenGuard)
     @ApiBearerAuth()
-    @Get(':depRepoId/dependencies')
+    @Get('dependencies/:depRepoId')
     async getDependencyRepoById(@Param('depRepoId') depRepoId: string) {
         return await this.repositoryService.getDependencyRepoById(depRepoId);
     }
