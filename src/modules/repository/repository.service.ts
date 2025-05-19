@@ -419,14 +419,13 @@ export class RepositoryService {
             .populate('githubApp')
             .lean();
 
-        // If the repository is not found, throw an error
         if (!repo) {
             throw new NotFoundException(
                 `Repository not found or deleted: ${repoId}`,
             );
         }
 
-        // console.log(repo);
+        await this.removeDependencyReposByRepoId(repoId);
 
         const accessToken = await this.githubAppService.createInstallationToken(
             repo.githubApp.installationId,
@@ -452,7 +451,6 @@ export class RepositoryService {
             const allDependencies: [string, any][] = Object.entries(
                 dependencyObj['packages'],
             );
-            const dependencyVersion = {};
 
             // allDependencies.forEach((dep) => {
             //     dependencyVersion[dep] = dependencyObj['packages'][dep].version;
@@ -463,33 +461,50 @@ export class RepositoryService {
 
                 const packageName = this.getPackageName(dependency);
                 const packageVersion = dependencyData.version;
-                let dependencyRepo;
-
-                if (!dependencyVersion[packageName]) {
-                    dependencyVersion[packageName] = [];
-                }
-
                 // if (!dependencyVersion[packageName].includes(packageVersion)) {
-                dependencyVersion[packageName].push(packageVersion);
 
-                // adding dependencies to the queue to be processed
-                const installedDep = await this.dependencyService.create({
-                    dependencyName: packageName,
-                });
-                dependencyRepo = await this.DependencyRepositoryModel.findOne({
-                    dependencyId: installedDep._id,
-                    repositoryId: repo._id,
-                    installedVersion: packageVersion,
-                });
-                if (!dependencyRepo) {
-                    dependencyRepo =
-                        await this.DependencyRepositoryModel.create({
-                            dependencyId: installedDep._id,
-                            repositoryId: repo._id,
-                            installedVersion: packageVersion,
-                        });
+                let installedDep =
+                    await this.dependencyService.findDependencyByName(
+                        packageName,
+                    );
+
+                if (!installedDep) {
+                    installedDep = await this.dependencyService.create({
+                        dependencyName: packageName,
+                    });
                 }
+                // let dependencyRepo;
+                // dependencyRepo = await this.DependencyRepositoryModel.findOne({
+                //     dependencyId: installedDep._id,
+                //     repositoryId: repo._id,
+                //     installedVersion: packageVersion,
+                // });
+                // if (!dependencyRepo) {
+                //     dependencyRepo =
+                //         await this.DependencyRepositoryModel.create({
+                //             dependencyId: installedDep._id,
+                //             repositoryId: repo._id,
+                //             installedVersion: packageVersion,
+                //         });
+                // }
                 //}
+
+                await this.DependencyRepositoryModel.findOneAndUpdate(
+                    {
+                        dependencyId: installedDep._id,
+                        repositoryId: repo._id,
+                        installedVersion: packageVersion,
+                    },
+                    {
+                        $set: {
+                            isDeleted: false,
+                        },
+                    },
+                    {
+                        new: true,
+                        upsert: true,
+                    },
+                ).lean();
 
                 if (dependencyData.dependencies) {
                     for (const [subDep, subDepVersion] of Object.entries(
@@ -600,9 +615,14 @@ export class RepositoryService {
         parentDependencyId: string,
         dependencyType: string,
     ) {
-        const installedSubDep = await this.dependencyService.create({
-            dependencyName: subDep,
-        });
+        let installedSubDep =
+            await this.dependencyService.findDependencyByName(subDep);
+
+        if (!installedSubDep) {
+            installedSubDep = await this.dependencyService.create({
+                dependencyName: subDep,
+            });
+        }
         // console.log('dependency install. trying for repo');
         // console.log(
         //     subDep,
@@ -611,17 +631,16 @@ export class RepositoryService {
         //     parentDependencyId,
         //     installedSubDep._id,
         // );
-        const depRepObj = {
-            dependencyId: installedSubDep._id, // new Types.ObjectId(installedSubDep._id as string),
-            repositoryId: new Types.ObjectId(repoId),
-            requiredVersion: subDepVersion,
-            parent: new Types.ObjectId(parentDependencyId),
-            dependencyType: dependencyType,
-        };
         await this.DependencyRepositoryModel.findOneAndUpdate(
-            depRepObj,
             {
-                $set: { ...depRepObj, isDeleted: false },
+                dependencyId: installedSubDep._id, // new Types.ObjectId(installedSubDep._id as string),
+                repositoryId: new Types.ObjectId(repoId),
+                requiredVersion: subDepVersion,
+                parent: new Types.ObjectId(parentDependencyId),
+                dependencyType: dependencyType,
+            },
+            {
+                $set: { isDeleted: false },
             },
             {
                 upsert: true,

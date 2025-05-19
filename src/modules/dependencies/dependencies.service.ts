@@ -38,7 +38,7 @@ export class DependenciesService {
         const dep = await this.dependencyModel
             .findOneAndUpdate(
                 createDependencyDTO,
-                { $set: createDependencyDTO },
+                { $setOnInsert: createDependencyDTO },
                 {
                     upsert: true,
                     new: true,
@@ -47,7 +47,7 @@ export class DependenciesService {
             .lean();
 
         await this.dependencyQueue.add('get-dependency-info', dep, {
-            delay: 1000,
+            delay: 2000,
             attempts: 2,
             removeOnComplete: true,
         });
@@ -55,9 +55,9 @@ export class DependenciesService {
     }
 
     async findOne(dependencyId: string) {
-        if (!Types.ObjectId.isValid(dependencyId)) {
+        if (isValidObjectId(dependencyId) === false) {
             throw new NotFoundException(
-                `Dependency Not Found with id: ${dependencyId}`,
+                `Invalid dependency id: ${dependencyId}`,
             );
         }
         const dep = await this.dependencyModel
@@ -65,12 +65,15 @@ export class DependenciesService {
                 _id: new Types.ObjectId(dependencyId),
             })
             .lean();
-        if (dep) {
-            return dep;
-        }
-        throw new NotFoundException(
-            `Dependency Not Found with id: ${dependencyId}`,
-        );
+        return dep;
+    }
+
+    async findDependencyByName(dependencyName: string) {
+        return await this.dependencyModel
+            .findOne({
+                dependencyName: dependencyName,
+            })
+            .lean();
     }
 
     async getDependenciesByRepoId(repoId: string) {
@@ -185,69 +188,77 @@ export class DependenciesService {
     }
 
     async getDependencyInfo(dep: DependencyDocument) {
-        const response = await firstValueFrom(
-            this.httpService.get(
-                `https://registry.npmjs.org/${dep.dependencyName}`,
-            ),
-        );
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(
+                    `https://registry.npmjs.org/${dep.dependencyName}`,
+                ),
+            );
 
-        const npmsResponse = await firstValueFrom(
-            this.httpService.get(
-                `https://api.npms.io/v2/package/${encodeURIComponent(dep.dependencyName)}`,
-            ),
-        );
-        let updatedData = {};
-        if (response.data) {
-            const data = this.parseNPMRegistryData(response.data);
-            data.versions.forEach(async (version) => {
-                await this.dependencyVersionModel.updateOne(
-                    { versionId: version.versionId, dependencyId: dep._id },
-                    {
-                        $set: {
-                            version: version.version,
-                            versionId: version.versionId,
-                            publishDate: version.publishDate,
+            const npmsResponse = await firstValueFrom(
+                this.httpService.get(
+                    `https://api.npms.io/v2/package/${encodeURIComponent(dep.dependencyName)}`,
+                ),
+            );
+            let updatedData = {};
+            if (response.data) {
+                const data = this.parseNPMRegistryData(response.data);
+                data.versions.forEach(async (version) => {
+                    await this.dependencyVersionModel.updateOne(
+                        { versionId: version.versionId, dependencyId: dep._id },
+                        {
+                            $set: {
+                                version: version.version,
+                                versionId: version.versionId,
+                                publishDate: version.publishDate,
+                            },
                         },
+                        { upsert: true },
+                    );
+                });
+
+                updatedData = {
+                    ...updatedData,
+                    ...{
+                        description: data.description,
+                        license: data.license,
+                        homepage: data.homepage,
+                        repository: data.repository,
+                        maintainers: data.maintainers,
+                        currentVersion: data.currentVersion,
+                        lastPublishDate: data.lastPublishDate,
                     },
-                    { upsert: true },
+                };
+            }
+
+            if (npmsResponse.data) {
+                const data = this.parseNPMSData(npmsResponse.data);
+                updatedData = {
+                    ...updatedData,
+                    ...{
+                        description: data.description,
+                        homepage:
+                            data.homepage || updatedData['homepage'] || '',
+                        npm: data.npm || '',
+                        repository:
+                            data.repository || updatedData['repository'] || '',
+                        license: data.license,
+                        evaluation: data.evaluation,
+                        score: data.score,
+                    },
+                };
+            }
+
+            if (updatedData) {
+                await this.dependencyModel.updateOne(
+                    { dependencyName: dep.dependencyName },
+                    { $set: updatedData },
                 );
-            });
-
-            updatedData = {
-                ...updatedData,
-                ...{
-                    description: data.description,
-                    license: data.license,
-                    homepage: data.homepage,
-                    repository: data.repository,
-                    maintainers: data.maintainers,
-                    currentVersion: data.currentVersion,
-                    lastPublishDate: data.lastPublishDate,
-                },
-            };
-        }
-
-        if (npmsResponse.data) {
-            const data = this.parseNPMSData(npmsResponse.data);
-            updatedData = {
-                ...updatedData,
-                ...{
-                    description: data.description,
-                    homepage: data.homepage || updatedData['homepage'] || '',
-                    npm: data.npm || '',
-                    repository:
-                        data.repository || updatedData['repository'] || '',
-                    license: data.license,
-                    evaluation: data.evaluation,
-                    score: data.score,
-                },
-            };
-        }
-
-        if (updatedData) {
-            await this.dependencyModel.updateOne(
-                { dependencyName: dep.dependencyName },
-                { $set: updatedData },
+            }
+        } catch (error) {
+            console.error(
+                `Error fetching dependency info for ${dep.dependencyName}:`,
+                error.message,
             );
         }
     }
