@@ -847,8 +847,9 @@ export class RepositoryService {
         const dependencies = await this.DependencyRepositoryModel.find({
             repositoryId: new Types.ObjectId(repoId),
             installedVersion: { $ne: null },
+            isDeleted: false,
         }).populate('dependencyId');
-        return dependencies;
+        return { data: dependencies, count: dependencies.length };
     }
 
     // need to be uncommented when the function is used to update all dependencies to not deleted
