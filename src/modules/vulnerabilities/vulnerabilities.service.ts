@@ -298,7 +298,7 @@ export class VulnerabilitiesService {
                 repoId,
             );
 
-        for (const dep of dependencies) {
+        for (const dep of dependencies.data) {
             if (dep.dependencyId) {
                 await this.getVulnerabilityInfoFromOSV(
                     dep.dependencyId?.['dependencyName'],
