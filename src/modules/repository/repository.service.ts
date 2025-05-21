@@ -473,6 +473,29 @@ export class RepositoryService {
         };
     }
 
+    async updateDefaultBranch(repoId: string, branchName: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
+        // Find the repository by ID and ensure it's not deleted
+        const repo = await this.RepositoryModel.findOne(
+            { _id: repoId, isDeleted: false },
+            { _id: 1, defaultBranch: 1 },
+        );
+
+        if (!repo) {
+            throw new NotFoundException(
+                `Repository not found or deleted: ${repoId}`,
+            );
+        }
+
+        return await this.RepositoryModel.updateOne(
+            { _id: repoId },
+            { $set: { defaultBranch: branchName } },
+            { new: true },
+        );
+    }
+
     async removeDependencyReposByRepoId(repoId: string) {
         await this.DependencyRepositoryModel.updateMany(
             { repositoryId: new Types.ObjectId(repoId) },
