@@ -90,6 +90,16 @@ export class RepositoryController {
         );
     }
 
+    @Get(':repoId/branches')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async getAllBranches(@Param('repoId') repoId: string, @Req() req: Request) {
+        return this.repositoryService.getAllBranches(
+            repoId,
+            req['user'].userId,
+        );
+    }
+
     @Get(':id/licenses')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)

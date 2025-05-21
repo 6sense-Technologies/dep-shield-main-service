@@ -6,7 +6,6 @@ import {
     UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { readFileSync } from 'fs';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -210,7 +209,7 @@ export class RepositoryService {
                                         owner: repo.owner.login,
                                         ownerType: repo.owner.type,
                                         isPrivate: repo.private,
-                                        defaultBranch: repo.default_branch,
+                                        // defaultBranch: repo.default_branch,
                                         githubApp: githubApps[i],
                                         isDeleted: false,
                                     },
@@ -253,6 +252,53 @@ export class RepositoryService {
         }
     }
 
+    async getAllBranches(repoId: string, userId: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
+
+        const repo = await this.RepositoryModel.findOne(
+            { _id: repoId, isDeleted: false, user: new Types.ObjectId(userId) },
+            { _id: 1, repoUrl: 1, githubApp: 1 },
+        )
+            .populate('githubApp')
+            .lean();
+
+        if (!repo) {
+            throw new NotFoundException(
+                `Repository not found or deleted: ${repoId}`,
+            );
+        }
+
+        const accessToken = await this.githubAppService.createInstallationToken(
+            repo.githubApp.installationId,
+        );
+
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(`${repo.repoUrl}/branches`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        Accept: 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
+                    },
+                    params: {
+                        per_page: 100,
+                    },
+                }),
+            );
+
+            const branches = response.data.map((branch) => ({
+                name: branch.name,
+            }));
+
+            return { data: branches, count: branches.length };
+        } catch (e) {
+            console.log(e.message);
+            throw new NotFoundException('Could not retrieve branches');
+        }
+    }
+
     async selectRepos(urlIds: string[]) {
         // Find matching repositories
         const matchedRepos = await this.RepositoryModel.find(
@@ -288,125 +334,6 @@ export class RepositoryService {
         return matches ? matches.pop().replace('node_modules/', '') : null;
     }
 
-    async getDependencyFileContent() {
-        return await JSON.parse(
-            readFileSync('public/package-lock.json')?.toString(),
-        );
-    }
-
-    // async selectRepoDemo(urlId: string) {
-    //     // Find the repository by ID and ensure it's not deleted
-    //     const repo = { _id: '67c7ad1743029bcbed4be37b' };
-
-    //     // If the repository is not found, throw an error
-    //     // if (!repo) {
-    //     //     throw new NotFoundException(
-    //     //         `Repository not found or deleted: ${urlId}`,
-    //     //     );
-    //     // }
-
-    //     // console.log(repo);
-
-    //     // const accessToken = await this.githubAppService.createInstallationToken(
-    //     //     repo.githubApp.installationId,
-    //     // );
-
-    //     try {
-    //         // const response = await firstValueFrom(
-    //         //     this.httpService.get(
-    //         //         `${repo.repoUrl}/contents/package-lock.json`,
-    //         //         {
-    //         //             headers: {
-    //         //                 Authorization: `Bearer ${accessToken}`,
-    //         //                 Accept: 'application/vnd.github.v3+json',
-    //         //                 'X-GitHub-Api-Version': '2022-11-28',
-    //         //             },
-    //         //         },
-    //         //     ),
-    //         // );
-
-    //         // const dependencyFile = response.data;
-    //         // const dependencyFileContentDecoded = atob(dependencyFile.content);
-    //         // const dependencyObj = JSON.parse(dependencyFileContentDecoded);
-    //         const dependencyObj = await this.getDependencyFileContent();
-    //         const allDependencies: [string, any][] = Object.entries(
-    //             dependencyObj['packages'],
-    //         );
-    //         const dependencyVersion = {};
-
-    //         // allDependencies.forEach((dep) => {
-    //         //     dependencyVersion[dep] = dependencyObj['packages'][dep].version;
-    //         // });
-
-    //         for (const [dependency, dependencyData] of allDependencies) {
-    //             if (!dependency) continue;
-
-    //             const packageName = this.getPackageName(dependency);
-    //             const packageVersion = dependencyData.version;
-    //             let dependencyRepo;
-
-    //             if (!dependencyVersion[packageName]) {
-    //                 dependencyVersion[packageName] = [];
-    //             }
-
-    //             //if (!dependencyVersion[packageName].includes(packageVersion)) {
-    //             dependencyVersion[packageName].push(packageVersion);
-    //             const installedDep = await this.dependencyService.create({
-    //                 dependencyName: packageName,
-    //             });
-    //             // const installedDep = { _id: '67c7ad1743029bcbed4be37b' };
-    //             dependencyRepo = await this.DependencyRepositoryModel.findOne({
-    //                 dependencyId: installedDep._id,
-    //                 repositoryId: repo._id,
-    //                 installedVersion: packageVersion,
-    //             });
-    //             if (!dependencyRepo) {
-    //                 dependencyRepo =
-    //                     await this.DependencyRepositoryModel.create({
-    //                         dependencyId: installedDep._id,
-    //                         repositoryId: repo._id,
-    //                         installedVersion: packageVersion,
-    //                     });
-    //                 console.log('creating');
-    //             }
-    //             //}
-    //             console.log(packageName, packageVersion, installedDep._id);
-    //             if (dependencyData.dependencies) {
-    //                 for (const [subDep, subDepVersion] of Object.entries(
-    //                     dependencyData.dependencies,
-    //                 )) {
-    //                     console.log(subDep, subDepVersion, 'sub');
-
-    //                     await this.registerSubDependency(
-    //                         subDep,
-    //                         repo._id as string,
-    //                         subDepVersion as string,
-    //                         installedDep._id as string,
-    //                         'dependency',
-    //                     );
-    //                 }
-    //             }
-
-    //             if (dependencyData.peerDependencies) {
-    //                 for (const [subDep, subDepVersion] of Object.entries(
-    //                     dependencyData.peerDependencies,
-    //                 )) {
-    //                     // await this.registerSubDependency(
-    //                     //     subDep,
-    //                     //     repo._id as string,
-    //                     //     subDepVersion as string,
-    //                     //     installedDep._id as string,
-    //                     //     'peerDependency',
-    //                     // );
-    //                     console.log(subDep, subDepVersion, 'sub');
-    //                 }
-    //             }
-    //         }
-    //     } catch (error) {
-    //         console.log(error);
-    //     }
-    // }
-
     async scanRepo(repoId: string) {
         if (isValidObjectId(repoId) === false) {
             throw new BadRequestException('Invalid repository ID');
@@ -441,6 +368,9 @@ export class RepositoryService {
                             Accept: 'application/vnd.github.v3+json',
                             'X-GitHub-Api-Version': '2022-11-28',
                         },
+                        params: {
+                            ref: repo.defaultBranch,
+                        },
                     },
                 ),
             );
@@ -452,9 +382,7 @@ export class RepositoryService {
                 dependencyObj['packages'],
             );
 
-            // allDependencies.forEach((dep) => {
-            //     dependencyVersion[dep] = dependencyObj['packages'][dep].version;
-            // });
+            console.log(dependencyObj);
 
             for (const [dependency, dependencyData] of allDependencies) {
                 if (!dependency) continue;
@@ -546,7 +474,7 @@ export class RepositoryService {
     }
 
     async removeDependencyReposByRepoId(repoId: string) {
-        return await this.DependencyRepositoryModel.updateMany(
+        await this.DependencyRepositoryModel.updateMany(
             { repositoryId: new Types.ObjectId(repoId) },
             { $set: { isDeleted: true } },
         );
