@@ -341,7 +341,7 @@ export class RepositoryService {
         // Find the repository by ID and ensure it's not deleted
         const repo = await this.RepositoryModel.findOne(
             { _id: repoId, isDeleted: false },
-            { _id: 1, repoUrl: 1, githubApp: 1 },
+            { _id: 1, repoUrl: 1, githubApp: 1, defaultBranch: 1 },
         )
             .populate('githubApp')
             .lean();
