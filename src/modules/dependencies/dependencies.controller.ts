@@ -5,11 +5,12 @@ import {
     Param,
     Post,
     Query,
+    Req,
     UseGuards,
 } from '@nestjs/common';
-import { DependenciesService } from './dependencies.service';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
+import { DependenciesService } from './dependencies.service';
 import { CreateDependencyDTO } from './dto/create-dependency.dto';
 
 @Controller('dependencies')
@@ -27,13 +28,23 @@ export class DependenciesController {
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
     getDetails(@Param('id') dependencyId: string) {
-        return this.dependenciesService.getDetails(dependencyId);
+        return this.dependenciesService.getDependencyById(dependencyId);
     }
 
     @Get()
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
-    getDependenciesByRepoId(@Query('repoId') repoId: string) {
-        return this.dependenciesService.getDependenciesByRepoId(repoId);
+    getDependenciesByRepoId(
+        @Query('repoId') repoId: string,
+        @Query('page') page: string,
+        @Query('limit') limit: string,
+        @Req() req: Request,
+    ) {
+        return this.dependenciesService.getDependenciesWithVulnerabilityCount(
+            req['user'].userId,
+            repoId,
+            +page,
+            +limit,
+        );
     }
 }

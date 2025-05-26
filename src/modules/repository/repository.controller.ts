@@ -108,29 +108,29 @@ export class RepositoryController {
         return this.repositoryService.updateDefaultBranch(repoId, branchName);
     }
 
-    @Get(':id/licenses')
-    @ApiBearerAuth()
-    @UseGuards(AccessTokenGuard)
-    async getLicensesByRepoId(
-        @Param('id') repoId: string,
-        @Query('page') page: string,
-        @Query('limit') limit: string,
-        @Req() req: Request,
-    ) {
-        // return this.repositoryService.getLicensesByRepoId(
-        //     req['user'].userId,
-        //     repoId,
-        //     +page,
-        //     +limit,
-        // );
+    // @Get(':id/licenses')
+    // @ApiBearerAuth()
+    // @UseGuards(AccessTokenGuard)
+    // async getLicensesByRepoId(
+    //     @Param('id') repoId: string,
+    //     @Query('page') page: string,
+    //     @Query('limit') limit: string,
+    //     @Req() req: Request,
+    // ) {
+    //     // return this.repositoryService.getLicensesByRepoId(
+    //     //     req['user'].userId,
+    //     //     repoId,
+    //     //     +page,
+    //     //     +limit,
+    //     // );
 
-        return this.repositoryService.getLicensesWithDependencyCount(
-            req['user'].userId,
-            repoId,
-            +page,
-            +limit,
-        );
-    }
+    //     return this.repositoryService.getLicensesWithDependencyCount(
+    //         req['user'].userId,
+    //         repoId,
+    //         +page,
+    //         +limit,
+    //     );
+    // }
 
     @Post('select-all')
     @ApiBearerAuth()
@@ -150,13 +150,6 @@ export class RepositoryController {
             repoId,
             req['user'].userId,
         );
-    }
-
-    @UseGuards(AccessTokenGuard)
-    @ApiBearerAuth()
-    @Get('dependencies/:depRepoId')
-    async getDependencyRepoById(@Param('depRepoId') depRepoId: string) {
-        return await this.repositoryService.getDependencyRepoById(depRepoId);
     }
 
     // @Put('dependency-repo/make-active')
