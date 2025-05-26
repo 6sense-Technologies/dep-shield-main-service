@@ -32,7 +32,7 @@ export class RepositoryController {
         @Query('limit') limit: string,
         @Req() req: Request,
     ) {
-        return this.repositoryService.getAllRepos(
+        return this.repositoryService.getRepositories(
             req['user'].userId,
             +page,
             +limit,
@@ -95,10 +95,7 @@ export class RepositoryController {
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
     async getAllBranches(@Param('repoId') repoId: string, @Req() req: Request) {
-        return this.repositoryService.getAllBranches(
-            repoId,
-            req['user'].userId,
-        );
+        return this.repositoryService.getBranches(repoId, req['user'].userId);
     }
 
     @Patch(':repoId')

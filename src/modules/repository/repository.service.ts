@@ -140,7 +140,7 @@ export class RepositoryService {
             },
         ];
     }
-    async getAllRepos(userId: string, page: number, limit: number) {
+    async getRepositories(userId: string, page: number, limit: number) {
         const user = await this.userModel.findById(userId).exec();
         if (!page || !limit) {
             throw new BadRequestException('Page and limit are required');
@@ -244,15 +244,15 @@ export class RepositoryService {
                     : 0;
 
             return {
-                repositories: repositoriesResult,
-                totalCount: totalCountResult,
+                data: repositoriesResult,
+                count: totalCountResult,
             };
         } catch (error) {
             console.error('Unexpected error in getAllRepos:', error.message);
         }
     }
 
-    async getAllBranches(repoId: string, userId: string) {
+    async getBranches(repoId: string, userId: string) {
         if (isValidObjectId(repoId) === false) {
             throw new BadRequestException('Invalid repository ID');
         }
@@ -489,7 +489,7 @@ export class RepositoryService {
             );
         }
 
-        return await this.RepositoryModel.updateOne(
+        return await this.RepositoryModel.findByIdAndUpdate(
             { _id: repoId },
             { $set: { defaultBranch: branchName } },
             { new: true },
@@ -628,8 +628,8 @@ export class RepositoryService {
                 : 0;
 
         return {
-            repositories: repositoriesResult,
-            totalCount: totalCountResult,
+            data: repositoriesResult,
+            count: totalCountResult,
         };
     }
 
@@ -783,12 +783,12 @@ export class RepositoryService {
         return repository;
     }
 
-    async getDependencyRepoById(repoId: string) {
-        if (isValidObjectId(repoId) === false) {
-            throw new BadRequestException('Invalid repository ID');
+    async getDependencyRepoById(depRepoId: string) {
+        if (isValidObjectId(depRepoId) === false) {
+            throw new BadRequestException('Invalid ID');
         }
         const dependencyRepo = await this.DependencyRepositoryModel.findOne({
-            _id: new Types.ObjectId(repoId),
+            _id: new Types.ObjectId(depRepoId),
         }).populate('dependencyId');
 
         return dependencyRepo;
@@ -819,25 +819,31 @@ export class RepositoryService {
         page: number,
         limit: number,
     ) {
-        if (!page || !limit) {
-            throw new BadRequestException('Page and limit are required');
+        let repoIds = [];
+
+        if (repoId) {
+            if (isValidObjectId(repoId) === false) {
+                throw new BadRequestException('Invalid repository ID');
+            }
+            repoIds = [new Types.ObjectId(repoId)];
+        } else {
+            const repos = await this.selectedRepos(1, 100, userId);
+            repoIds = repos.data.map((repo) => repo._id);
         }
 
-        if (isValidObjectId(repoId) === false) {
-            throw new BadRequestException('Invalid repository ID');
-        }
+        // const repository = await this.getRepositoryByUserId(userId, repoId);
 
-        const repository = await this.getRepositoryByUserId(userId, repoId);
-
-        if (!repository) {
-            throw new NotFoundException('Repository not found.');
-        }
+        // if (!repository) {
+        //     throw new NotFoundException('Repository not found.');
+        // }
 
         // Aggregation pipeline to get licenses with dependency count
         const pipeline = [
             {
                 $match: {
-                    repositoryId: new Types.ObjectId(repoId),
+                    repositoryId: {
+                        $in: repoIds,
+                    },
                     installedVersion: { $ne: null },
                     isDeleted: false,
                 },
