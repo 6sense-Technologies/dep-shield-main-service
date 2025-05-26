@@ -3,6 +3,7 @@ import {
     Controller,
     Get,
     Param,
+    Patch,
     Post,
     Query,
     Req,
@@ -88,6 +89,26 @@ export class RepositoryController {
             +limit,
             req['user'].userId,
         );
+    }
+
+    @Get(':repoId/branches')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async getAllBranches(@Param('repoId') repoId: string, @Req() req: Request) {
+        return this.repositoryService.getAllBranches(
+            repoId,
+            req['user'].userId,
+        );
+    }
+
+    @Patch(':repoId')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async updateRepo(
+        @Param('repoId') repoId: string,
+        @Body('branchName') branchName: string,
+    ) {
+        return this.repositoryService.updateDefaultBranch(repoId, branchName);
     }
 
     @Get(':id/licenses')
