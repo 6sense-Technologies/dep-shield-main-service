@@ -65,7 +65,7 @@ export class GithubAppService {
             );
             return githubInstallationAccessToken;
         } catch (error) {
-            console.log(`Error creating app installation token...`);
+            console.log(`Error creating app installation token!!!`);
             console.log(error.message);
         }
     }
