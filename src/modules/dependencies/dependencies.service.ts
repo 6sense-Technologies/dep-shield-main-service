@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { InjectQueue } from '@nestjs/bullmq';
 import {
+    BadRequestException,
     forwardRef,
     Inject,
     Injectable,
@@ -76,16 +77,29 @@ export class DependenciesService {
             .lean();
     }
 
-    async getDependenciesByRepoId(repoId: string) {
-        if (!isValidObjectId(repoId)) {
-            throw new NotFoundException(`Repository ID is required`);
+    async getDependenciesWithVulnerabilityCount(
+        userId: string,
+        repoId: string,
+        page: number,
+        limit: number,
+    ) {
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
         }
-        const dependencies =
-            await this.repositoryService.getInstalledDependenciesByRepoId(
+
+        const result =
+            await this.repositoryService.getDependenciesWithVulnerabilityCount(
+                userId,
                 repoId,
+                page,
+                limit,
             );
 
-        return dependencies;
+        const data = result[0].data;
+        const count =
+            result[0].metadata.length > 0 ? result[0].metadata[0].total : 0;
+
+        return { data, count };
     }
 
     async getDetailsByDependencyName(dependencyName: string) {
@@ -127,33 +141,16 @@ export class DependenciesService {
             .lean();
     }
 
-    async getDetails(dependencyId: string) {
-        let aggregate = [];
-        if (!Types.ObjectId.isValid(dependencyId)) {
-            throw new NotFoundException(
-                `Dependency Not Found with id: ${dependencyId}`,
-            );
+    async getDependencyById(dependencyId: string) {
+        if (isValidObjectId(dependencyId) === false) {
+            throw new BadRequestException('Invalid dependency ID');
         }
-        aggregate.push({
-            $match: {
-                _id: new Types.ObjectId(dependencyId),
-            },
-        });
-        aggregate.push({
-            $lookup: {
-                from: 'dependencyversions',
-                localField: '_id',
-                foreignField: 'dependencyId',
-                as: 'versions',
-            },
-        });
-        const dep = await this.dependencyModel.aggregate(aggregate);
-        if (dep.length > 0) {
-            return dep[0];
-        }
-        throw new NotFoundException(
-            `Dependency Not Found with id: ${dependencyId}`,
+
+        const license = await this.dependencyModel.findById(
+            new Types.ObjectId(dependencyId),
         );
+
+        return license;
     }
 
     parseNPMRegistryData(data: any) {

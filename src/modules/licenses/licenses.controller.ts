@@ -22,11 +22,18 @@ export class LicensesController {
         return this.licensesService.seed();
     }
 
-    @Get(':spdxId')
+    @Get(':licenseId')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
-    getDetails(@Param('spdxId') spdxId: string) {
-        return this.licensesService.getDetails(spdxId);
+    getLicenseById(@Param('licenseId') licenseId: string) {
+        return this.licensesService.getLicenseById(licenseId);
+    }
+
+    @Get('spdx/:spdxId')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    getLicenseBySpdxId(@Param('spdxId') spdxId: string) {
+        return this.licensesService.getLicenseBySpdxId(spdxId);
     }
 
     @Get()

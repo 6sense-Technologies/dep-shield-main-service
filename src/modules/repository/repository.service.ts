@@ -803,6 +803,87 @@ export class RepositoryService {
         return { data: dependencies, count: dependencies.length };
     }
 
+    async getDependenciesWithVulnerabilityCount(
+        userId: string,
+        repoId: string,
+        page: number,
+        limit: number,
+    ) {
+        let repoIds = [];
+
+        repoIds = await this.getRepoIds(repoId, userId);
+
+        const pipeline = [
+            {
+                $match: {
+                    repositoryId: {
+                        $in: repoIds,
+                    },
+                    installedVersion: { $ne: null },
+                    isDeleted: false,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencies',
+                    localField: 'dependencyId',
+                    foreignField: '_id',
+                    as: 'dependency',
+                },
+            },
+            {
+                $unwind: '$dependency',
+            },
+            {
+                $lookup: {
+                    from: 'vulnerabilities',
+                    localField: 'dependencyId',
+                    foreignField: 'dependencyId',
+                    as: 'vulnerability',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$vulnerability',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $group: {
+                    _id: '$dependency.dependencyName',
+                    vulnerabilityCount: { $sum: 1 },
+                    license: {
+                        $first: '$dependency.license',
+                    },
+                    popularity: {
+                        $first: '$dependency.score.detail.popularity',
+                    },
+                    quality: { $first: '$dependency.score.detail.quality' },
+                    dependencyId: { $first: '$dependency._id' },
+                },
+            },
+            {
+                $project: {
+                    _id: 0,
+                    name: '$_id',
+                    vulnerabilityCount: 1,
+                    quality: { $ifNull: ['$quality', null] },
+                    popularity: { $ifNull: ['$popularity', null] },
+                    license: 1,
+                    dependencyId: 1,
+                },
+            },
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }], // Get the total count of groups
+                    data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+                },
+            },
+        ];
+
+        return await this.DependencyRepositoryModel.aggregate(pipeline);
+    }
+
     // need to be uncommented when the function is used to update all dependencies to not deleted
     // async updateAllDependencyRepo() {
     //     return await this.DependencyRepositoryModel.updateMany(
@@ -821,15 +902,7 @@ export class RepositoryService {
     ) {
         let repoIds = [];
 
-        if (repoId) {
-            if (isValidObjectId(repoId) === false) {
-                throw new BadRequestException('Invalid repository ID');
-            }
-            repoIds = [new Types.ObjectId(repoId)];
-        } else {
-            const repos = await this.selectedRepos(1, 100, userId);
-            repoIds = repos.data.map((repo) => repo._id);
-        }
+        repoIds = await this.getRepoIds(repoId, userId);
 
         // const repository = await this.getRepositoryByUserId(userId, repoId);
 
@@ -883,6 +956,7 @@ export class RepositoryService {
                     licenseFamily: {
                         $first: '$licenseDetails.useCase.licenseFamily',
                     },
+                    licenseId: { $first: '$licenseDetails._id' },
                 },
             },
             {
@@ -892,6 +966,7 @@ export class RepositoryService {
                     dependencyCount: 1,
                     licenseRisk: { $ifNull: ['$licenseRisk', null] },
                     licenseFamily: { $ifNull: ['$licenseFamily', null] },
+                    licenseId: 1,
                 },
             },
             {
@@ -902,11 +977,20 @@ export class RepositoryService {
             },
         ];
 
-        const result = await this.DependencyRepositoryModel.aggregate(pipeline);
-        const data = result[0].data;
-        const totalCount =
-            result[0].metadata.length > 0 ? result[0].metadata[0].total : 0;
+        return await this.DependencyRepositoryModel.aggregate(pipeline);
+    }
 
-        return { data, totalCount };
+    private async getRepoIds(repoId: string, userId: string) {
+        let repoIds: Types.ObjectId[] = [];
+        if (repoId) {
+            if (isValidObjectId(repoId) === false) {
+                throw new BadRequestException('Invalid repository ID');
+            }
+            repoIds = [new Types.ObjectId(repoId)];
+        } else {
+            const repos = await this.selectedRepos(1, 100, userId);
+            repoIds = repos.data.map((repo) => repo._id);
+        }
+        return repoIds;
     }
 }

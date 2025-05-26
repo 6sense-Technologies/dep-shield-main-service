@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as fs from 'fs';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import {
     License,
     LicenseDocument,
@@ -29,10 +29,22 @@ export class LicensesService {
         return 'Seeded licenses';
     }
 
-    async getDetails(spdxId: string) {
+    async getLicenseBySpdxId(spdxId: string) {
         return await this.licenseModel.findOne({
             licenseId: spdxId.toUpperCase(),
         });
+    }
+
+    async getLicenseById(licenseId: string) {
+        if (isValidObjectId(licenseId) === false) {
+            throw new BadRequestException('Invalid license ID');
+        }
+
+        const license = await this.licenseModel.findById(
+            new Types.ObjectId(licenseId),
+        );
+
+        return license;
     }
 
     async getLicensesWithDependencyCount(
@@ -45,11 +57,18 @@ export class LicensesService {
             throw new BadRequestException('Page and limit are required');
         }
 
-        return await this.repositoryService.getLicensesWithDependencyCount(
-            userId,
-            repoId,
-            page,
-            limit,
-        );
+        const result =
+            await this.repositoryService.getLicensesWithDependencyCount(
+                userId,
+                repoId,
+                page,
+                limit,
+            );
+
+        const data = result[0].data;
+        const count =
+            result[0].metadata.length > 0 ? result[0].metadata[0].total : 0;
+
+        return { data, count };
     }
 }
