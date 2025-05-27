@@ -18,6 +18,7 @@ import {
     SelectRepoUrlsDto,
     SelectRepoUrlSingleDTO,
 } from './dto/bulkselect.dto';
+import { GetRepositoryDto } from './dto/getRepository.dto';
 // import { SelectRepoUrlDto } from './dto/github.dto';
 
 @Controller('repositories')
@@ -34,8 +35,8 @@ export class RepositoryController {
     ) {
         return this.repositoryService.getRepositories(
             req['user'].userId,
-            +page,
-            +limit,
+            page,
+            limit,
         );
     }
     @Post('select-repos')
@@ -80,15 +81,10 @@ export class RepositoryController {
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
     async getSelectedRepos(
-        @Query('page') page: string,
-        @Query('limit') limit: string,
+        @Query() query: GetRepositoryDto,
         @Req() req: Request,
     ) {
-        return this.repositoryService.selectedRepos(
-            +page,
-            +limit,
-            req['user'].userId,
-        );
+        return this.repositoryService.selectedRepos(query, req['user'].userId);
     }
 
     @Get(':repoId/branches')
