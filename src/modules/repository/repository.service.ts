@@ -23,6 +23,7 @@ import {
 import { User, UserDocument } from '../../database/user-schema/user.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
 import { GithubAppService } from '../github-app/github-app.service';
+import { GetRepositoryDto } from './dto/getRepository.dto';
 import { validatePagination } from './validator/pagination.validator';
 @Injectable()
 export class RepositoryService {
@@ -90,10 +91,15 @@ export class RepositoryService {
 
     private getRepositoriesPipeline(
         userId: string,
-        skipVal: number,
-        limit: number,
+        query: GetRepositoryDto,
         onlySelected: boolean = false,
     ) {
+        let pipeline = [];
+        const { pageNum, limitNum } = validatePagination(
+            query.page,
+            query.limit,
+        );
+        const skipVal = (pageNum - 1) * limitNum;
         const matchConditions: any = {
             user: new Types.ObjectId(userId),
             isDeleted: false,
@@ -102,8 +108,7 @@ export class RepositoryService {
         if (onlySelected) {
             matchConditions.isSelected = true;
         }
-
-        return [
+        pipeline.push(
             { $match: matchConditions },
             {
                 $lookup: {
@@ -124,30 +129,56 @@ export class RepositoryService {
                     'githubApp.isDeleted': false,
                 },
             },
-            {
-                $facet: {
-                    repositories: [
-                        { $skip: skipVal },
-                        { $limit: limit },
-                        {
-                            $project: {
-                                githubApp: 0,
-                            },
-                        },
-                    ],
-                    totalCount: [{ $count: 'count' }],
-                },
-            },
-        ];
-    }
-    async getRepositories(userId: string, page: number, limit: number) {
-        const user = await this.userModel.findById(userId).exec();
-        if (!page || !limit) {
-            throw new BadRequestException('Page and limit are required');
-        }
-        const { pageNum, limitNum } = validatePagination(page, limit);
+        );
 
-        const skipVal = (pageNum - 1) * limitNum;
+        if (query.dependencyId) {
+            if (isValidObjectId(query.dependencyId) === false) {
+                throw new BadRequestException('Invalid dependency ID');
+            }
+            pipeline.push(
+                {
+                    $lookup: {
+                        from: 'dependencyrepositories',
+                        localField: '_id',
+                        foreignField: 'repositoryId',
+                        as: 'dependencyRepos',
+                    },
+                },
+                {
+                    $unwind: {
+                        path: '$dependencyRepos',
+                        preserveNullAndEmptyArrays: false,
+                    },
+                },
+                {
+                    $match: {
+                        'dependencyRepos.dependencyId': new Types.ObjectId(
+                            query.dependencyId,
+                        ),
+                    },
+                },
+            );
+        }
+        pipeline.push({
+            $facet: {
+                repositories: [
+                    { $skip: skipVal },
+                    { $limit: limitNum },
+                    {
+                        $project: {
+                            githubApp: 0,
+                            dependencyRepos: 0,
+                        },
+                    },
+                ],
+                totalCount: [{ $count: 'count' }],
+            },
+        });
+
+        return pipeline;
+    }
+    async getRepositories(userId: string, page: string, limit: string) {
+        const user = await this.userModel.findById(userId).exec();
         if (!user) {
             throw new UnauthorizedException('User is not valid');
         }
@@ -230,11 +261,11 @@ export class RepositoryService {
             if (bulkOps.length > 0) {
                 await this.RepositoryModel.bulkWrite(bulkOps);
             }
-            const pipeline = this.getRepositoriesPipeline(
-                userId,
-                skipVal,
-                limitNum,
-            );
+            const query: GetRepositoryDto = {
+                page,
+                limit,
+            };
+            const pipeline = this.getRepositoriesPipeline(userId, query);
             const repositories = await this.RepositoryModel.aggregate(pipeline);
 
             const repositoriesResult = repositories[0].repositories;
@@ -600,25 +631,14 @@ export class RepositoryService {
         ).lean();
     }
 
-    async selectedRepos(page: number, limit: number, userId: string) {
-        if (!page || !limit) {
-            throw new BadRequestException('Page and limit are required');
-        }
-
+    async selectedRepos(query: GetRepositoryDto, userId: string) {
         const user = await this.userModel.findById(userId).exec();
-        const { pageNum, limitNum } = validatePagination(page, limit);
-        const skipVal = (pageNum - 1) * limitNum;
 
         if (!user) {
             throw new UnauthorizedException('User is not valid');
         }
 
-        const pipeline = this.getRepositoriesPipeline(
-            userId,
-            skipVal,
-            limitNum,
-            true,
-        );
+        const pipeline = this.getRepositoriesPipeline(userId, query, true);
         const repositories = await this.RepositoryModel.aggregate(pipeline);
 
         const repositoriesResult = repositories[0].repositories;
@@ -988,7 +1008,10 @@ export class RepositoryService {
             }
             repoIds = [new Types.ObjectId(repoId)];
         } else {
-            const repos = await this.selectedRepos(1, 100, userId);
+            const repos = await this.selectedRepos(
+                { page: '1', limit: '100' },
+                userId,
+            );
             repoIds = repos.data.map((repo) => repo._id);
         }
         return repoIds;
