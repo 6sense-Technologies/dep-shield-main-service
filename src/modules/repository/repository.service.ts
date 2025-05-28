@@ -89,6 +89,11 @@ export class RepositoryService {
     //     });
     // }
 
+    async testWebhook(webhook: any) {
+        console.log(webhook);
+        return webhook;
+    }
+
     private getRepositoriesPipeline(
         userId: string,
         query: GetRepositoryDto,
