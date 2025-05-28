@@ -39,6 +39,7 @@ export class RepositoryController {
             limit,
         );
     }
+
     @Post('select-repos')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
@@ -46,6 +47,11 @@ export class RepositoryController {
         return this.repositoryService.selectRepos(
             selectRepoUrlsDTO.selectedRepos,
         );
+    }
+
+    @Post('webhook')
+    async testWebhook(@Body() webhook: any) {
+        return this.repositoryService.testWebhook(webhook);
     }
 
     @Post('select-repo')
