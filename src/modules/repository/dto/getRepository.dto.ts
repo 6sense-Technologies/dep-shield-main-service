@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import { IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class GetRepositoryDto {
     @IsNotEmpty()
@@ -6,5 +6,8 @@ export class GetRepositoryDto {
     @IsNotEmpty()
     page?: string;
     @IsOptional()
+    @IsMongoId()
     dependencyId?: string;
+    @IsOptional()
+    license?: string;
 }

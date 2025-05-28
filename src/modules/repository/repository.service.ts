@@ -131,34 +131,61 @@ export class RepositoryService {
             },
         );
 
-        if (query.dependencyId) {
-            if (isValidObjectId(query.dependencyId) === false) {
-                throw new BadRequestException('Invalid dependency ID');
-            }
+        if (query.dependencyId || query.license) {
             pipeline.push(
                 {
                     $lookup: {
                         from: 'dependencyrepositories',
                         localField: '_id',
                         foreignField: 'repositoryId',
-                        as: 'dependencyRepos',
+                        as: 'dependencyRepo',
                     },
                 },
                 {
                     $unwind: {
-                        path: '$dependencyRepos',
+                        path: '$dependencyRepo',
                         preserveNullAndEmptyArrays: false,
                     },
                 },
-                {
+            );
+
+            if (query.dependencyId) {
+                pipeline.push({
                     $match: {
-                        'dependencyRepos.dependencyId': new Types.ObjectId(
+                        'dependencyRepo.dependencyId': new Types.ObjectId(
                             query.dependencyId,
                         ),
+                        'dependencyRepo.isDeleted': false,
                     },
-                },
-            );
+                });
+            }
+
+            if (query.license) {
+                pipeline.push(
+                    {
+                        $lookup: {
+                            from: 'dependencies',
+                            localField: 'dependencyRepo.dependencyId',
+                            foreignField: '_id',
+                            as: 'dependency',
+                        },
+                    },
+                    {
+                        $unwind: {
+                            path: '$dependency',
+                            preserveNullAndEmptyArrays: false,
+                        },
+                    },
+                    {
+                        $match: {
+                            'dependency.license': query.license,
+                            'dependencyRepo.isDeleted': false,
+                        },
+                    },
+                );
+            }
         }
+
         pipeline.push({
             $facet: {
                 repositories: [
@@ -167,7 +194,8 @@ export class RepositoryService {
                     {
                         $project: {
                             githubApp: 0,
-                            dependencyRepos: 0,
+                            dependencyRepo: 0,
+                            dependency: 0,
                         },
                     },
                 ],
@@ -884,7 +912,7 @@ export class RepositoryService {
             },
             {
                 $project: {
-                    _id: 0,
+                    _id: '$dependencyId',
                     name: '$_id',
                     vulnerabilityCount: 1,
                     quality: { $ifNull: ['$quality', null] },
@@ -981,7 +1009,7 @@ export class RepositoryService {
             },
             {
                 $project: {
-                    _id: 0,
+                    _id: '$licenseId',
                     license: '$_id',
                     dependencyCount: 1,
                     licenseRisk: { $ifNull: ['$licenseRisk', null] },
