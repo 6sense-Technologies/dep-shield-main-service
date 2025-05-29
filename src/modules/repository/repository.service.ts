@@ -99,6 +99,7 @@ export class RepositoryService {
             const repo = await this.RepositoryModel.findOne({
                 repoUrl: webhook.repository.url, // will find by gitHub repository id later.
                 isDeleted: false,
+                isSelected: true,
             });
             if (!repo) {
                 return { message: 'Repository not found' };
@@ -635,7 +636,7 @@ export class RepositoryService {
 
         await this.addDependencyReposByRepoId(repoId);
 
-        return await this.RepositoryModel.updateOne(
+        return await this.RepositoryModel.findOneAndUpdate(
             { _id: repoId },
             { $set: { isSelected: true } },
         );
@@ -661,7 +662,7 @@ export class RepositoryService {
         await this.removeDependencyReposByRepoId(repoId);
 
         // Update the repository to mark it as unselected
-        return await this.RepositoryModel.updateOne(
+        return await this.RepositoryModel.findByIdAndUpdate(
             { _id: repoId },
             { $set: { isSelected: false } },
         );
