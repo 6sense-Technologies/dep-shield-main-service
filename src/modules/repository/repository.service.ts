@@ -491,7 +491,7 @@ export class RepositoryService {
                 dependencyObj['packages'],
             );
 
-            console.log(dependencyObj);
+            // console.log(dependencyObj);
 
             for (const [dependency, dependencyData] of allDependencies) {
                 if (!dependency) continue;
@@ -683,14 +683,7 @@ export class RepositoryService {
                 dependencyName: subDep,
             });
         }
-        // console.log('dependency install. trying for repo');
-        // console.log(
-        //     subDep,
-        //     repoId,
-        //     subDepVersion,
-        //     parentDependencyId,
-        //     installedSubDep._id,
-        // );
+
         await this.DependencyRepositoryModel.findOneAndUpdate(
             {
                 dependencyId: installedSubDep._id, // new Types.ObjectId(installedSubDep._id as string),
