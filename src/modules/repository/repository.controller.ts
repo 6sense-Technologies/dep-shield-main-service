@@ -49,6 +49,11 @@ export class RepositoryController {
         );
     }
 
+    @Post('github-webhooks')
+    async scanRepoHook(@Body() webhook: any) {
+        return this.repositoryService.scanRepoWebhook(webhook);
+    }
+
     @Post('webhook')
     async testWebhook(@Body() webhook: any) {
         return this.repositoryService.testWebhook(webhook);

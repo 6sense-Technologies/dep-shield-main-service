@@ -94,6 +94,49 @@ export class RepositoryService {
         return webhook;
     }
 
+    async scanRepoWebhook(webhook: IGitHubPushWebhook) {
+        try {
+            const repo = await this.RepositoryModel.findOne({
+                repoUrl: webhook.repository.url, // will find by gitHub repository id later.
+                isDeleted: false,
+            });
+            if (!repo) {
+                return { message: 'Repository not found' };
+            }
+            const branch = this.getBranchFromRef(webhook.ref);
+            if (branch != repo.defaultBranch) {
+                return { message: 'Branch is not default branch' };
+            }
+            const allModified = new Set();
+            for (const commit of webhook.commits) {
+                for (const file of commit.modified) {
+                    allModified.add(file);
+                }
+            }
+            if (allModified.has('package-lock.json')) {
+                this.scanRepo(repo._id.toString());
+                console.log('started scanning for repository:', repo._id);
+                return { message: 'Repository scanning started...' };
+            } else {
+                return { message: 'No package-lock.json modified' };
+            }
+        } catch (error) {
+            console.error('Error processing webhook:', error.message);
+            return {
+                message: 'Error processing webhook',
+                error: error.message,
+            };
+        }
+    }
+
+    private getBranchFromRef(ref) {
+        if (typeof ref !== 'string') return null;
+        if (ref.startsWith('refs/heads/')) {
+            return ref.replace('refs/heads/', '');
+        }
+        return null; // not a branch
+    }
+
     private getRepositoriesPipeline(
         userId: string,
         query: GetRepositoryDto,
@@ -261,11 +304,12 @@ export class RepositoryService {
                             updateOne: {
                                 filter: {
                                     user: user.id,
-                                    repoUrl: repo.url,
-                                }, // Match by user.id and repoUrl
+                                    repoUrl: repo.url, // will find by gitHub repository id later.
+                                },
                                 update: {
                                     $set: {
                                         user,
+                                        gitHubRepoId: repo.id,
                                         repoName: repo.full_name,
                                         repoUrl: repo.url,
                                         htmlUrl: repo.html_url,

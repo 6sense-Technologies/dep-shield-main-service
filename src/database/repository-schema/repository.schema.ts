@@ -10,6 +10,9 @@ export class Repository {
     @Prop({ type: 'ObjectId', ref: 'User', required: true }) // Reference to the User schema
     user: User;
 
+    @Prop()
+    gitHubRepoId: number;
+
     @Prop({ required: true })
     repoName: string;
 
