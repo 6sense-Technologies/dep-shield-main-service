@@ -634,12 +634,94 @@ export class RepositoryService {
             );
         }
 
+        const webHooks = await this.getWebHooksByRepo(repo);
+        let isWebHookAdded = false;
+        if (webHooks.length) {
+            for (const hook of webHooks) {
+                if (
+                    hook.config.url ===
+                        'https://dep-shield-main-service.onrender.com/repositories/github-webhooks' &&
+                    hook.type === 'Repository'
+                ) {
+                    isWebHookAdded = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isWebHookAdded) {
+            this.createWebHook(repo);
+        }
+
         await this.addDependencyReposByRepoId(repoId);
 
-        return await this.RepositoryModel.findOneAndUpdate(
+        return await this.RepositoryModel.findByIdAndUpdate(
             { _id: repoId },
             { $set: { isSelected: true } },
         );
+    }
+
+    async getHooks(repoId: string) {
+        const repo = await this.RepositoryModel.findOne(
+            { _id: repoId, isDeleted: false },
+            { _id: 1, repoUrl: 1, githubApp: 1 },
+        ).populate('githubApp');
+        return await this.getWebHooksByRepo(repo);
+    }
+
+    async createWebHook(repo) {
+        const accessToken = await this.githubAppService.createInstallationToken(
+            repo.githubApp.installationId,
+        );
+
+        try {
+            await firstValueFrom(
+                this.httpService.post(
+                    `${repo.repoUrl}/hooks`,
+                    {
+                        active: true, // Determines if notifications are sent when the webhook is triggered.
+                        events: ['push'], // event that triggers the webhook
+                        config: {
+                            url: 'https://dep-shield-main-service.onrender.com/repositories/github-webhooks',
+                            content_type: 'json', // webhook body payload format
+                        },
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: 'application/vnd.github+json',
+                            'X-GitHub-Api-Version': '2022-11-28',
+                        },
+                    },
+                ),
+            );
+            console.log('Webhook created successfully for repo:', repo._id);
+        } catch (error) {
+            console.error('Error creating webhook:', error.message);
+        }
+    }
+
+    async getWebHooksByRepo(repo) {
+        const accessToken = await this.githubAppService.createInstallationToken(
+            repo.githubApp.installationId,
+        );
+
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(`${repo.repoUrl}/hooks`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        Accept: 'application/vnd.github+json',
+                        'X-GitHub-Api-Version': '2022-11-28',
+                    },
+                }),
+            );
+
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching webhooks:', error.message);
+            return [];
+        }
     }
 
     async unSelectRepo(repoId: string) {
