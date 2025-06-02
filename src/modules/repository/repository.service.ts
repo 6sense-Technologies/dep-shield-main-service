@@ -1012,7 +1012,9 @@ export class RepositoryService {
                 },
             },
             {
-                $unwind: '$dependency',
+                $unwind: {
+                    path: '$dependency',
+                },
             },
             {
                 $lookup: {
