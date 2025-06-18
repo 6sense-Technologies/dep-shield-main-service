@@ -119,7 +119,7 @@ export class GithubAppService {
                                     owner: repo.owner.login,
                                     ownerType: repo.owner.type,
                                     isPrivate: repo.private,
-                                    defaultBranch: repo.default_branch,
+                                    // defaultBranch: repo.default_branch,
                                     githubApp: githubApps[i],
                                     isDeleted: false,
                                 },

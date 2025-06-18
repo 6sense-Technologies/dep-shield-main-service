@@ -59,6 +59,11 @@ export class RepositoryController {
         return this.repositoryService.testWebhook(webhook);
     }
 
+    @Get('test')
+    async test(@Query('id') id: string) {
+        return this.repositoryService.getHooks(id);
+    }
+
     @Post('select-repo')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
