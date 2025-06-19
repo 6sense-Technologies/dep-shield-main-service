@@ -657,6 +657,7 @@ export class RepositoryService {
             repositoryId: new Types.ObjectId(repoId),
         }).lean();
         if (!dependency) {
+            console.log('Starting scan for new repository:', repoId);
             this.scanRepo(repoId);
         } else {
             await this.addDependencyReposByRepoId(repoId);
