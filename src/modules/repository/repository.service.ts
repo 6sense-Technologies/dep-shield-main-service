@@ -598,6 +598,8 @@ export class RepositoryService {
             );
         }
 
+        this.scanRepo(repoId);
+
         return await this.RepositoryModel.findByIdAndUpdate(
             { _id: repoId },
             { $set: { defaultBranch: branchName } },
