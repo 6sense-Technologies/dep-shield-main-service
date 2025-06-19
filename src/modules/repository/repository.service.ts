@@ -656,7 +656,7 @@ export class RepositoryService {
         const dependency = await this.DependencyRepositoryModel.findOne({
             repositoryId: new Types.ObjectId(repoId),
         }).lean();
-        if (dependency) {
+        if (!dependency) {
             this.scanRepo(repoId);
         } else {
             await this.addDependencyReposByRepoId(repoId);
