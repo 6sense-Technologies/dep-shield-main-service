@@ -653,7 +653,14 @@ export class RepositoryService {
             this.createWebHook(repo);
         }
 
-        await this.addDependencyReposByRepoId(repoId);
+        const dependency = await this.DependencyRepositoryModel.findOne({
+            repositoryId: new Types.ObjectId(repoId),
+        }).lean();
+        if (dependency) {
+            this.scanRepo(repoId);
+        } else {
+            await this.addDependencyReposByRepoId(repoId);
+        }
 
         return await this.RepositoryModel.findByIdAndUpdate(
             { _id: repoId },
