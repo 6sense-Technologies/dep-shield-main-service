@@ -4,6 +4,7 @@ import {
     Get,
     Param,
     Post,
+    Query,
     Req,
     UseGuards,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
 import { CreateVulnerabilityDTO } from './dto/create-vulnerability.dto';
 import { VulnerabilitiesService } from './vulnerabilities.service';
+import { GetVulnerabilityDto } from './dto/getVulnerability.dto';
 
 @Controller('vulnerabilities')
 export class VulnerabilitiesController {
@@ -40,6 +42,21 @@ export class VulnerabilitiesController {
     @UseGuards(AccessTokenGuard)
     getByCVEId(@Param('cveId') cveId: string) {
         return this.vulnerabilitiesService.getByCVEId(cveId);
+    }
+
+    @Get()
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    getVulnerabilities(
+        @Query() query: GetVulnerabilityDto,
+        @Req() req: Request,
+    ) {
+        return this.vulnerabilitiesService.getVulnerabilities(
+            req['user'].userId,
+            query.repoId,
+            +query.page,
+            +query.limit,
+        );
     }
 
     @Get('test')

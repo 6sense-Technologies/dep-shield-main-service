@@ -1,6 +1,8 @@
 import { HttpService } from '@nestjs/axios';
 import {
     BadRequestException,
+    forwardRef,
+    Inject,
     Injectable,
     NotFoundException,
     UnauthorizedException,
@@ -23,6 +25,7 @@ import {
 import { User, UserDocument } from '../../database/user-schema/user.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
 import { GithubAppService } from '../github-app/github-app.service';
+import { VulnerabilitiesService } from '../vulnerabilities/vulnerabilities.service';
 import { GetRepositoryDto } from './dto/getRepository.dto';
 import { validatePagination } from './validator/pagination.validator';
 @Injectable()
@@ -31,6 +34,8 @@ export class RepositoryService {
         private readonly httpService: HttpService,
         private readonly githubAppService: GithubAppService,
         private readonly dependencyService: DependenciesService,
+        @Inject(forwardRef(() => VulnerabilitiesService))
+        private readonly vulnerabilityService: VulnerabilitiesService,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         @InjectModel(Repository.name)
         private RepositoryModel: Model<RepositoryDocument>,
@@ -286,7 +291,7 @@ export class RepositoryService {
                             {
                                 headers: {
                                     Authorization: `Bearer ${token}`,
-                                    Accept: 'application/vnd.github.v3+json',
+                                    Accept: 'application/vnd.github+json',
                                 },
                                 params: {
                                     visibility: 'all',
@@ -466,15 +471,15 @@ export class RepositoryService {
         const accessToken = await this.githubAppService.createInstallationToken(
             repo.githubApp.installationId,
         );
-
+        let response;
         try {
-            const response = await firstValueFrom(
+            response = await firstValueFrom(
                 this.httpService.get(
                     `${repo.repoUrl}/contents/package-lock.json`,
                     {
                         headers: {
                             Authorization: `Bearer ${accessToken}`,
-                            Accept: 'application/vnd.github.v3+json',
+                            Accept: 'application/vnd.github+json',
                             'X-GitHub-Api-Version': '2022-11-28',
                         },
                         params: {
@@ -483,97 +488,114 @@ export class RepositoryService {
                     },
                 ),
             );
-
-            const dependencyFile = response.data;
-            const dependencyFileContentDecoded = atob(dependencyFile.content);
-            const dependencyObj = JSON.parse(dependencyFileContentDecoded);
-            const allDependencies: [string, any][] = Object.entries(
-                dependencyObj['packages'],
-            );
-
-            // console.log(dependencyObj);
-
-            for (const [dependency, dependencyData] of allDependencies) {
-                if (!dependency) continue;
-
-                const packageName = this.getPackageName(dependency);
-                const packageVersion = dependencyData.version;
-                // if (!dependencyVersion[packageName].includes(packageVersion)) {
-
-                let installedDep =
-                    await this.dependencyService.findDependencyByName(
-                        packageName,
-                    );
-
-                if (!installedDep) {
-                    installedDep = await this.dependencyService.create({
-                        dependencyName: packageName,
-                    });
-                }
-                // let dependencyRepo;
-                // dependencyRepo = await this.DependencyRepositoryModel.findOne({
-                //     dependencyId: installedDep._id,
-                //     repositoryId: repo._id,
-                //     installedVersion: packageVersion,
-                // });
-                // if (!dependencyRepo) {
-                //     dependencyRepo =
-                //         await this.DependencyRepositoryModel.create({
-                //             dependencyId: installedDep._id,
-                //             repositoryId: repo._id,
-                //             installedVersion: packageVersion,
-                //         });
-                // }
-                //}
-
-                await this.DependencyRepositoryModel.findOneAndUpdate(
-                    {
-                        dependencyId: installedDep._id,
-                        repositoryId: repo._id,
-                        installedVersion: packageVersion,
-                    },
-                    {
-                        $set: {
-                            isDeleted: false,
-                        },
-                    },
-                    {
-                        new: true,
-                        upsert: true,
-                    },
-                ).lean();
-
-                if (dependencyData.dependencies) {
-                    for (const [subDep, subDepVersion] of Object.entries(
-                        dependencyData.dependencies,
-                    )) {
-                        await this.registerSubDependency(
-                            subDep,
-                            repo._id as string,
-                            subDepVersion as string,
-                            installedDep._id as string,
-                            'dependency',
-                        );
-                    }
-                }
-
-                if (dependencyData.peerDependencies) {
-                    for (const [subDep, subDepVersion] of Object.entries(
-                        dependencyData.dependencies,
-                    )) {
-                        await this.registerSubDependency(
-                            subDep,
-                            repo._id as string,
-                            subDepVersion as string,
-                            installedDep._id as string,
-                            'peerDependency',
-                        );
-                    }
-                }
-            }
         } catch (error) {
             console.log(error);
             throw new NotFoundException('Could not retrieve package-lock.json');
+        }
+
+        let dependencyObj;
+        try {
+            const dependencyFile = response.data;
+            const dependencyFileContentDecoded = atob(dependencyFile.content);
+            dependencyObj = JSON.parse(dependencyFileContentDecoded);
+        } catch (error) {
+            console.log(error);
+            throw new NotFoundException('Could not parse package-lock.json');
+        }
+
+        const allDependencies: [string, any][] = Object.entries(
+            dependencyObj['packages'],
+        );
+
+        // console.log(dependencyObj);
+
+        for (const [dependency, dependencyData] of allDependencies) {
+            if (!dependency) continue;
+
+            const packageName = this.getPackageName(dependency);
+            const packageVersion = dependencyData.version;
+            // if (!dependencyVersion[packageName].includes(packageVersion)) {
+
+            let installedDep =
+                await this.dependencyService.findDependencyByName(packageName);
+
+            if (!installedDep) {
+                installedDep = await this.dependencyService.create({
+                    dependencyName: packageName,
+                });
+            }
+            // let dependencyRepo;
+            // dependencyRepo = await this.DependencyRepositoryModel.findOne({
+            //     dependencyId: installedDep._id,
+            //     repositoryId: repo._id,
+            //     installedVersion: packageVersion,
+            // });
+            // if (!dependencyRepo) {
+            //     dependencyRepo =
+            //         await this.DependencyRepositoryModel.create({
+            //             dependencyId: installedDep._id,
+            //             repositoryId: repo._id,
+            //             installedVersion: packageVersion,
+            //         });
+            // }
+            //}
+
+            await this.DependencyRepositoryModel.findOneAndUpdate(
+                {
+                    dependencyId: installedDep._id,
+                    repositoryId: repo._id,
+                    installedVersion: packageVersion,
+                },
+                {
+                    $set: {
+                        isDeleted: false,
+                    },
+                },
+                {
+                    new: true,
+                    upsert: true,
+                },
+            ).lean();
+
+            const vulnerability =
+                await this.vulnerabilityService.getVulnerabilityByDependencyId(
+                    installedDep._id as string,
+                );
+
+            if (!vulnerability) {
+                this.vulnerabilityService.create({
+                    dependencyName: packageName,
+                    ecosystem: 'npm',
+                });
+            }
+
+            if (dependencyData.dependencies) {
+                for (const [subDep, subDepVersion] of Object.entries(
+                    dependencyData.dependencies,
+                )) {
+                    await this.registerSubDependency(
+                        subDep,
+                        repo._id as string,
+                        subDepVersion as string,
+                        installedDep._id as string,
+                        'dependency',
+                    );
+                }
+            }
+
+            if (dependencyData.peerDependencies) {
+                for (const [subDep, subDepVersion] of Object.entries(
+                    dependencyData.dependencies,
+                )) {
+                    await this.registerSubDependency(
+                        subDep,
+                        repo._id as string,
+                        subDepVersion as string,
+                        installedDep._id as string,
+                        'peerDependency',
+                    );
+                }
+            }
         }
 
         return {
@@ -858,7 +880,7 @@ export class RepositoryService {
                     {
                         headers: {
                             Authorization: `Bearer ${accessToken}`,
-                            Accept: 'application/vnd.github.v3+json',
+                            Accept: 'application/vnd.github+json',
                             'X-GitHub-Api-Version': '2022-11-28',
                         },
                     },
@@ -934,7 +956,7 @@ export class RepositoryService {
                         {
                             headers: {
                                 Authorization: `Bearer ${accessToken}`,
-                                Accept: 'application/vnd.github.v3+json',
+                                Accept: 'application/vnd.github+json',
                                 'X-GitHub-Api-Version': '2022-11-28',
                             },
                         },
@@ -1078,6 +1100,36 @@ export class RepositoryService {
     //         },
     //     );
     // }
+
+    async getVulnerabilities(
+        userId: string,
+        repoId: string,
+        page: number,
+        limit: number,
+    ) {
+        let repoIds = [];
+        repoIds = await this.getRepoIds(repoId, userId);
+
+        const pipeline = [
+            {
+                $match: {
+                    repositoryId: {
+                        $in: repoIds,
+                    },
+                    installedVersion: { $ne: null },
+                    isDeleted: false,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencies',
+                    localField: 'dependencyId',
+                    foreignField: '_id',
+                    as: 'dependency',
+                },
+            },
+        ];
+    }
 
     async getLicensesWithDependencyCount(
         userId: string,
