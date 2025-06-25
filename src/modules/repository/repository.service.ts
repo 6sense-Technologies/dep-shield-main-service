@@ -557,17 +557,17 @@ export class RepositoryService {
                 },
             ).lean();
 
-            const vulnerability =
-                await this.vulnerabilityService.getVulnerabilityByDependencyId(
-                    installedDep._id as string,
-                );
+            // const vulnerability =
+            //     await this.vulnerabilityService.getVulnerabilityByDependencyId(
+            //         installedDep._id as string,
+            //     );
 
-            if (!vulnerability) {
-                this.vulnerabilityService.create({
-                    dependencyName: packageName,
-                    ecosystem: 'npm',
-                });
-            }
+            // if (!vulnerability) {
+            //     this.vulnerabilityService.create({
+            //         dependencyName: packageName,
+            //         ecosystem: 'npm',
+            //     });
+            // }
 
             if (dependencyData.dependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
