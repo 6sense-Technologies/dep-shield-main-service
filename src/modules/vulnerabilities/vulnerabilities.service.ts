@@ -1,10 +1,17 @@
 import { HttpService } from '@nestjs/axios';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+    forwardRef,
+    Inject,
+    Injectable,
+    Logger,
+    NotFoundException,
+    BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import {
     VulnerabilityVersion,
@@ -16,6 +23,7 @@ import {
 } from '../../database/vulnerability-schema/vulnerability.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
 import { RepositoryService } from '../repository/repository.service';
+import { CreateVulnerabilityDTO } from './dto/create-vulnerability.dto';
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -25,6 +33,7 @@ export class VulnerabilitiesService {
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
         private readonly dependenciesService: DependenciesService,
+        @Inject(forwardRef(() => RepositoryService))
         private readonly repositoryService: RepositoryService,
         @InjectQueue('vulnerabilities') private vulnerabilityQueue: Queue,
         @InjectModel(Vulnerability.name)
@@ -33,7 +42,7 @@ export class VulnerabilitiesService {
         private vulnerabilityVersionModel: Model<VulnerabilityVersionDocument>,
     ) {}
 
-    async create(createVulnerabilityDTO: any) {
+    async create(createVulnerabilityDTO: CreateVulnerabilityDTO) {
         await this.vulnerabilityQueue.add(
             'get-vulnerability-info',
             createVulnerabilityDTO,
@@ -44,6 +53,25 @@ export class VulnerabilitiesService {
                 // repeat: { every: 24 * 60 * 60 * 1000 },
             },
         );
+    }
+
+    async getVulnerabilities(
+        userId: string,
+        repoId: string,
+        page: number,
+        limit: number,
+    ) {
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+    }
+
+    async getVulnerabilityByDependencyId(dependencyId: string) {
+        return await this.vulnerabilityModel
+            .findOne({
+                dependencyId: new Types.ObjectId(dependencyId),
+            })
+            .lean();
     }
 
     async getByCVEId(cveId: string) {

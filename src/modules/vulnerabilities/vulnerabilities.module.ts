@@ -39,5 +39,6 @@ import { VulnerabilitiesService } from './vulnerabilities.service';
         RepositoryService,
         GithubAppService,
     ],
+    exports: [VulnerabilitiesService],
 })
 export class VulnerabilitiesModule {}

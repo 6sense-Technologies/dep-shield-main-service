@@ -8,6 +8,7 @@ import { RepositorySchemaModule } from '../../database/repository-schema/reposit
 import { UserSchemaModule } from '../../database/user-schema/user-schema.module';
 import { DependenciesModule } from '../dependencies/dependencies.module';
 import { GithubAppModule } from '../github-app/github-app.module';
+import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
 import { RepositoryController } from './repository.controller';
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { RepositoryController } from './repository.controller';
         DependencyRepositorySchemaModule,
         DependenciesModule,
         GithubAppModule,
+        VulnerabilitiesModule,
     ], // Add HttpModule to imports
     controllers: [RepositoryController],
     providers: [RepositoryService],
