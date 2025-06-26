@@ -575,25 +575,25 @@ export class RepositoryService {
                 },
             ).lean();
 
-            const dependencyVersion =
-                await this.dependencyService.getVersionByDepVersion(
-                    installedDep._id as string,
-                    packageVersion,
-                );
+            // const dependencyVersion =
+            //     await this.dependencyService.getVersionByDepVersion(
+            //         installedDep._id as string,
+            //         packageVersion,
+            //     );
 
-            const vulnerability =
-                await this.vulnerabilityService.getVulnerabilityByDependencyId(
-                    installedDep._id as string,
-                    dependencyVersion._id as string,
-                );
+            // const vulnerability =
+            //     await this.vulnerabilityService.getVulnerabilityByDependencyId(
+            //         installedDep._id as string,
+            //         dependencyVersion._id as string,
+            //     );
 
-            if (!vulnerability) {
-                this.vulnerabilityService.create({
-                    dependencyName: packageName,
-                    ecosystem: 'npm',
-                    version: packageVersion,
-                });
-            }
+            // if (!vulnerability) {
+            //     this.vulnerabilityService.create({
+            //         dependencyName: packageName,
+            //         ecosystem: 'npm',
+            //         version: packageVersion,
+            //     });
+            // }
 
             if (dependencyData.dependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
