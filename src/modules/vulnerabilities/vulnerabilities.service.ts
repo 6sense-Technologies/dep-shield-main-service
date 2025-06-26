@@ -64,12 +64,29 @@ export class VulnerabilitiesService {
         if (!page || !limit) {
             throw new BadRequestException('Page and limit are required');
         }
+
+        const result = await this.repositoryService.getVulnerabilities(
+            userId,
+            repoId,
+            page,
+            limit,
+        );
+
+        const data = result[0].data;
+        const count =
+            result[0].metadata.length > 0 ? result[0].metadata[0].total : 0;
+
+        return { data, count };
     }
 
-    async getVulnerabilityByDependencyId(dependencyId: string) {
+    async getVulnerabilityByDependencyId(
+        dependencyId: string,
+        dependencyVersionId: string,
+    ) {
         return await this.vulnerabilityModel
             .findOne({
                 dependencyId: new Types.ObjectId(dependencyId),
+                dependencyVersionId: new Types.ObjectId(dependencyVersionId),
             })
             .lean();
     }
@@ -152,7 +169,8 @@ export class VulnerabilitiesService {
         }));
     }
 
-    async getCVEInfoFromNVD(cveId: string, vuln: any) {
+    async getCVEInfoFromNVD(vuln: any) {
+        const cveId = vuln.cveId;
         try {
             this.logger.log(`Fetching NVD data for ${cveId}...`);
             const response = await firstValueFrom(
@@ -397,8 +415,8 @@ export class VulnerabilitiesService {
             await Promise.all(
                 vulns.map(async (vuln) =>
                     this.processVulnerability(
-                        dependency,
-                        dependencyVersion,
+                        dependency._id,
+                        dependencyVersion._id,
                         vuln,
                     ),
                 ),
@@ -415,12 +433,10 @@ export class VulnerabilitiesService {
         }
     }
 
-    async processVulnerability(dependency, dependencyVersion, vuln) {
+    async processVulnerability(dependencyId, dependencyVersionId, vuln) {
         await this.vulnerabilityQueue.add(
             'get-cve-info',
             {
-                dependency: dependency._id,
-                dependencyVersion: dependencyVersion._id,
                 vuln,
             },
             {
@@ -435,8 +451,8 @@ export class VulnerabilitiesService {
         );
 
         const vulnData = {
-            dependencyId: dependency._id,
-            dependencyVersion: dependencyVersion._id,
+            dependencyId,
+            dependencyVersionId,
             id: vuln.id,
             summary: vuln.summary,
             details: vuln.details,
@@ -456,20 +472,20 @@ export class VulnerabilitiesService {
 
         await Promise.all(
             vuln.affected.map((affected) =>
-                this.processAffectedVersions(dependency, savedVuln, affected),
+                this.processAffectedVersions(dependencyId, savedVuln, affected),
             ),
         );
     }
 
-    async processAffectedVersions(dependency, savedVuln, affected) {
+    async processAffectedVersions(dependencyId, savedVuln, affected) {
         const introducedVersion =
             await this.dependenciesService.getVersionByDepVersion(
-                dependency._id,
+                dependencyId,
                 affected.ranges.introduced,
             );
         const fixedVersion =
             await this.dependenciesService.getVersionByDepVersion(
-                dependency._id,
+                dependencyId,
                 affected.ranges.fixed,
             );
 
@@ -489,9 +505,9 @@ export class VulnerabilitiesService {
                 {
                     updateOne: {
                         filter: {
-                            dependencyId: dependency._id,
-                            vulnerability: savedVuln._id,
-                            dependencyVersion: introducedVersion._id,
+                            dependencyId,
+                            vulnerabilityId: savedVuln._id,
+                            dependencyVersionId: introducedVersion._id,
                             status: 'introduced',
                         },
                         update: { $set: { source: affected.source } },
@@ -513,9 +529,9 @@ export class VulnerabilitiesService {
                 {
                     updateOne: {
                         filter: {
-                            dependencyId: dependency._id,
-                            vulnerability: savedVuln._id,
-                            dependencyVersion: fixedVersion._id,
+                            dependencyId,
+                            vulnerabilityId: savedVuln._id,
+                            dependencyVersionId: fixedVersion._id,
                             status: 'fixed',
                         },
                         update: { $set: { source: affected.source } },
