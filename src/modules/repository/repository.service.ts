@@ -135,6 +135,24 @@ export class RepositoryService {
         }
     }
 
+    async getRepoDetails(repoId: string, userId: string) {
+        const repo = await this.RepositoryModel.findOne({
+            _id: repoId,
+            isDeleted: false,
+            user: new Types.ObjectId(userId),
+        }).lean();
+
+        if (!repo) {
+            throw new NotFoundException('Repository not found');
+        }
+        return {
+            repoName: repo.repoName,
+            repoUrl: repo.repoUrl,
+            defaultBranch: repo.defaultBranch,
+            _id: repo._id,
+        };
+    }
+
     private getBranchFromRef(ref) {
         if (typeof ref !== 'string') return null;
         if (ref.startsWith('refs/heads/')) {
