@@ -8,6 +8,7 @@ import { RepositorySchemaModule } from '../../database/repository-schema/reposit
 import { UserSchemaModule } from '../../database/user-schema/user-schema.module';
 import { GithubAppService } from '../github-app/github-app.service';
 import { RepositoryService } from '../repository/repository.service';
+import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
 import { DependencyConsumer } from './dependencies.consumer';
 import { DependenciesController } from './dependencies.controller';
 import { DependenciesService } from './dependencies.service';
@@ -23,6 +24,7 @@ import { DependenciesService } from './dependencies.service';
         RepositorySchemaModule,
         GithubAppSchemaModule,
         DependencyRepositorySchemaModule,
+        VulnerabilitiesModule,
     ],
     controllers: [DependenciesController],
     providers: [

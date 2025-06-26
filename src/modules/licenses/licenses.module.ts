@@ -10,6 +10,7 @@ import { LicenseSchemaModule } from '../../database/license-schema/license-schem
 import { DependenciesService } from '../dependencies/dependencies.service';
 import { GithubAppService } from '../github-app/github-app.service';
 import { RepositoryService } from '../repository/repository.service';
+import { VulnerabilitiesModule } from '../vulnerabilities/vulnerabilities.module';
 import { LicensesController } from './licenses.controller';
 import { LicensesService } from './licenses.service';
 
@@ -25,6 +26,7 @@ import { LicensesService } from './licenses.service';
         BullModule.registerQueue({
             name: 'dependency',
         }),
+        VulnerabilitiesModule,
     ],
     controllers: [LicensesController],
     providers: [
