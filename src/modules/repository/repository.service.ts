@@ -575,17 +575,25 @@ export class RepositoryService {
                 },
             ).lean();
 
-            // const vulnerability =
-            //     await this.vulnerabilityService.getVulnerabilityByDependencyId(
-            //         installedDep._id as string,
-            //     );
+            const dependencyVersion =
+                await this.dependencyService.getVersionByDepVersion(
+                    installedDep._id as string,
+                    packageVersion,
+                );
 
-            // if (!vulnerability) {
-            //     this.vulnerabilityService.create({
-            //         dependencyName: packageName,
-            //         ecosystem: 'npm',
-            //     });
-            // }
+            const vulnerability =
+                await this.vulnerabilityService.getVulnerabilityByDependencyId(
+                    installedDep._id as string,
+                    dependencyVersion._id as string,
+                );
+
+            if (!vulnerability) {
+                this.vulnerabilityService.create({
+                    dependencyName: packageName,
+                    ecosystem: 'npm',
+                    version: packageVersion,
+                });
+            }
 
             if (dependencyData.dependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
@@ -638,13 +646,13 @@ export class RepositoryService {
             );
         }
 
-        this.scanRepo(repoId);
-
-        return await this.RepositoryModel.findByIdAndUpdate(
+        const updatedRepo = await this.RepositoryModel.findByIdAndUpdate(
             { _id: repoId },
             { $set: { defaultBranch: branchName } },
             { new: true },
         );
+        this.scanRepo(repoId);
+        return updatedRepo;
     }
 
     async removeDependencyReposByRepoId(repoId: string) {
@@ -1140,13 +1148,47 @@ export class RepositoryService {
             },
             {
                 $lookup: {
-                    from: 'dependencies',
+                    from: 'dependencyversions',
+                    localField: 'installedVersion',
+                    foreignField: 'version',
+                    as: 'dependencyVersion',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependencyVersion',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'vulnerabilities',
                     localField: 'dependencyId',
-                    foreignField: '_id',
-                    as: 'dependency',
+                    foreignField: 'dependencyId',
+                    as: 'vulnerability',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$vulnerability',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $match: {
+                    'vulnerability.dependencyVersionId':
+                        '$dependencyVersion._id',
+                },
+            },
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }], // Get the total count of groups
+                    data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
                 },
             },
         ];
+
+        return await this.DependencyRepositoryModel.aggregate(pipeline);
     }
 
     async getLicensesWithDependencyCount(
