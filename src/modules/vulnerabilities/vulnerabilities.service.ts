@@ -1,10 +1,17 @@
 import { HttpService } from '@nestjs/axios';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+    BadRequestException,
+    forwardRef,
+    Inject,
+    Injectable,
+    Logger,
+    NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import {
     VulnerabilityVersion,
@@ -16,6 +23,7 @@ import {
 } from '../../database/vulnerability-schema/vulnerability.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
 import { RepositoryService } from '../repository/repository.service';
+import { CreateVulnerabilityDTO } from './dto/create-vulnerability.dto';
 
 @Injectable()
 export class VulnerabilitiesService {
@@ -25,6 +33,7 @@ export class VulnerabilitiesService {
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
         private readonly dependenciesService: DependenciesService,
+        @Inject(forwardRef(() => RepositoryService))
         private readonly repositoryService: RepositoryService,
         @InjectQueue('vulnerabilities') private vulnerabilityQueue: Queue,
         @InjectModel(Vulnerability.name)
@@ -33,7 +42,7 @@ export class VulnerabilitiesService {
         private vulnerabilityVersionModel: Model<VulnerabilityVersionDocument>,
     ) {}
 
-    async create(createVulnerabilityDTO: any) {
+    async create(createVulnerabilityDTO: CreateVulnerabilityDTO) {
         await this.vulnerabilityQueue.add(
             'get-vulnerability-info',
             createVulnerabilityDTO,
@@ -44,6 +53,25 @@ export class VulnerabilitiesService {
                 // repeat: { every: 24 * 60 * 60 * 1000 },
             },
         );
+    }
+
+    async getVulnerabilities(
+        userId: string,
+        repoId: string,
+        page: number,
+        limit: number,
+    ) {
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+    }
+
+    async getVulnerabilityByDependencyId(dependencyId: string) {
+        return await this.vulnerabilityModel
+            .findOne({
+                dependencyId: new Types.ObjectId(dependencyId),
+            })
+            .lean();
     }
 
     async getByCVEId(cveId: string) {
@@ -124,7 +152,7 @@ export class VulnerabilitiesService {
         }));
     }
 
-    async getCVEInfoFromNVD(dependencyId: string, cveId: string, vuln: any) {
+    async getCVEInfoFromNVD(cveId: string, vuln: any) {
         try {
             this.logger.log(`Fetching NVD data for ${cveId}...`);
             const response = await firstValueFrom(
@@ -160,7 +188,7 @@ export class VulnerabilitiesService {
 
             this.updateSeverityData(vulnData, vuln.CVSSseverity);
 
-            const savedVuln = await this.vulnerabilityModel.findOneAndUpdate(
+            await this.vulnerabilityModel.findOneAndUpdate(
                 { id: vuln.id },
                 { $set: vulnData },
                 { upsert: true, new: true },
@@ -302,6 +330,7 @@ export class VulnerabilitiesService {
             if (dep.dependencyId) {
                 await this.getVulnerabilityInfoFromOSV(
                     dep.dependencyId?.['dependencyName'],
+                    '', // demo version. will be replaced with actual version if needed.
                     'npm',
                 );
             }
@@ -311,6 +340,7 @@ export class VulnerabilitiesService {
 
     async getVulnerabilityInfoFromOSV(
         dependencyName: string,
+        version: string,
         ecosystem: string,
     ) {
         try {
@@ -318,6 +348,7 @@ export class VulnerabilitiesService {
             const response = await firstValueFrom(
                 this.httpService.post(`https://api.osv.dev/v1/query`, {
                     package: { name: dependencyName, ecosystem },
+                    version,
                 }),
             );
 
@@ -342,6 +373,20 @@ export class VulnerabilitiesService {
                 await this.dependenciesService.getDetailsByDependencyName(
                     dependencyName,
                 );
+
+            const dependencyVersion =
+                await this.dependenciesService.getVersionByDepVersion(
+                    dependency._id,
+                    version,
+                );
+
+            if (!dependencyVersion) {
+                this.logger.warn(
+                    `Dependency version ${version} not found in DB`,
+                );
+                return;
+            }
+
             if (!dependency) {
                 this.logger.warn(
                     `Dependency ${dependencyName} not found in DB`,
@@ -351,7 +396,11 @@ export class VulnerabilitiesService {
 
             await Promise.all(
                 vulns.map(async (vuln) =>
-                    this.processVulnerability(dependency, vuln),
+                    this.processVulnerability(
+                        dependency,
+                        dependencyVersion,
+                        vuln,
+                    ),
                 ),
             );
 
@@ -366,10 +415,14 @@ export class VulnerabilitiesService {
         }
     }
 
-    async processVulnerability(dependency, vuln) {
+    async processVulnerability(dependency, dependencyVersion, vuln) {
         await this.vulnerabilityQueue.add(
             'get-cve-info',
-            { dependency: dependency._id, vuln },
+            {
+                dependency: dependency._id,
+                dependencyVersion: dependencyVersion._id,
+                vuln,
+            },
             {
                 delay: 20000,
                 attempts: 2,
@@ -383,6 +436,7 @@ export class VulnerabilitiesService {
 
         const vulnData = {
             dependencyId: dependency._id,
+            dependencyVersion: dependencyVersion._id,
             id: vuln.id,
             summary: vuln.summary,
             details: vuln.details,

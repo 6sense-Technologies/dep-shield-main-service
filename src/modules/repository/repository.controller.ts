@@ -168,4 +168,14 @@ export class RepositoryController {
     // async makeActiveDependencyRepo() {
     //     return await this.repositoryService.updateAllDependencyRepo();
     // }
+
+    @Get(':repoId')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async getRepo(@Param('repoId') repoId: string, @Req() req: Request) {
+        return this.repositoryService.getRepoDetails(
+            repoId,
+            req['user'].userId,
+        );
+    }
 }

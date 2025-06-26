@@ -54,7 +54,7 @@ export class GithubAppService {
                     {
                         headers: {
                             Authorization: `Bearer ${jwt}`,
-                            Accept: 'application/vnd.github.v3+json',
+                            Accept: 'application/vnd.github+json',
                         },
                     },
                 ),
@@ -88,7 +88,7 @@ export class GithubAppService {
                         {
                             headers: {
                                 Authorization: `Bearer ${token}`,
-                                Accept: 'application/vnd.github.v3+json',
+                                Accept: 'application/vnd.github+json',
                             },
                             params: {
                                 visibility: 'all',
@@ -163,7 +163,7 @@ export class GithubAppService {
                     {
                         headers: {
                             Authorization: `Bearer ${jwt}`,
-                            Accept: 'application/vnd.github.v3+json',
+                            Accept: 'application/vnd.github+json',
                         },
                     },
                 ),
