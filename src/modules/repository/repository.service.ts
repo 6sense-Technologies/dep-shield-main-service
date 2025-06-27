@@ -462,7 +462,7 @@ export class RepositoryService {
     }
 
     getPackageName(path: string) {
-        const matches = path.match(/node_modules\/(@?[^\/]+)/g);
+        const matches = path.match(/node_modules\/(@[^\/]+\/[^\/]+|[^\/]+)/g);
         return matches ? matches.pop().replace('node_modules/', '') : null;
     }
 
@@ -525,14 +525,11 @@ export class RepositoryService {
             dependencyObj['packages'],
         );
 
-        // console.log(dependencyObj);
-
         for (const [dependency, dependencyData] of allDependencies) {
             if (!dependency) continue;
 
             const packageName = this.getPackageName(dependency);
             const packageVersion = dependencyData.version;
-            // if (!dependencyVersion[packageName].includes(packageVersion)) {
 
             let installedDep =
                 await this.dependencyService.findDependencyByName(packageName);
@@ -541,22 +538,14 @@ export class RepositoryService {
                 installedDep = await this.dependencyService.create({
                     dependencyName: packageName,
                 });
+            } else {
+                this.addVulnerability(
+                    packageName,
+                    installedDep._id.toString() as string,
+                    packageVersion,
+                    'npm',
+                );
             }
-            // let dependencyRepo;
-            // dependencyRepo = await this.DependencyRepositoryModel.findOne({
-            //     dependencyId: installedDep._id,
-            //     repositoryId: repo._id,
-            //     installedVersion: packageVersion,
-            // });
-            // if (!dependencyRepo) {
-            //     dependencyRepo =
-            //         await this.DependencyRepositoryModel.create({
-            //             dependencyId: installedDep._id,
-            //             repositoryId: repo._id,
-            //             installedVersion: packageVersion,
-            //         });
-            // }
-            //}
 
             await this.DependencyRepositoryModel.findOneAndUpdate(
                 {
@@ -575,25 +564,8 @@ export class RepositoryService {
                 },
             ).lean();
 
-            const dependencyVersion =
-                await this.dependencyService.getVersionByDepVersion(
-                    installedDep._id as string,
-                    packageVersion,
-                );
-
-            const vulnerability =
-                await this.vulnerabilityService.getVulnerabilityByDependencyId(
-                    installedDep._id as string,
-                    dependencyVersion._id as string,
-                );
-
-            if (!vulnerability) {
-                this.vulnerabilityService.create({
-                    dependencyName: packageName,
-                    ecosystem: 'npm',
-                    version: packageVersion,
-                });
-            }
+            // add vulnerability
+            // this.addVulnerability(packageName, installedDep._id as string, packageVersion, 'npm');
 
             if (dependencyData.dependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
@@ -611,7 +583,7 @@ export class RepositoryService {
 
             if (dependencyData.peerDependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
-                    dependencyData.dependencies,
+                    dependencyData.peerDependencies,
                 )) {
                     await this.registerSubDependency(
                         subDep,
@@ -628,6 +600,33 @@ export class RepositoryService {
             message:
                 'Dependencies scanned successfully. It will take some time to process',
         };
+    }
+
+    async addVulnerability(
+        dependencyName: string,
+        dependencyId: string,
+        version: string,
+        ecosystem: string = 'npm',
+    ) {
+        const dependencyVersion =
+            await this.dependencyService.getVersionByDepVersion(
+                dependencyId,
+                version,
+            );
+
+        const vulnerability =
+            await this.vulnerabilityService.getVulnerabilityByDependencyId(
+                dependencyId.toString(),
+                dependencyVersion._id.toString() as string,
+            );
+
+        if (!vulnerability) {
+            this.vulnerabilityService.create({
+                dependencyName,
+                ecosystem,
+                version,
+            });
+        }
     }
 
     async updateDefaultBranch(repoId: string, branchName: string) {

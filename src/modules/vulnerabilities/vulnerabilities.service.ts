@@ -376,7 +376,7 @@ export class VulnerabilitiesService {
             }
 
             const vulns = this.parseOSVData(response.data);
-            if (vulns.length === 0) {
+            if (!vulns?.length) {
                 this.logger.log(
                     `No vulnerabilities found for ${dependencyName}`,
                 );

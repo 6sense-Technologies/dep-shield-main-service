@@ -1,7 +1,7 @@
 import {
-    Processor,
-    OnWorkerEvent,
     OnQueueEvent,
+    OnWorkerEvent,
+    Processor,
     WorkerHost,
 } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';

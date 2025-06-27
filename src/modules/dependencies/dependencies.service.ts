@@ -35,7 +35,7 @@ export class DependenciesService {
         @InjectQueue('dependency') private dependencyQueue: Queue,
     ) {}
 
-    async create(createDependencyDTO: CreateDependencyDTO) {
+    async create(createDependencyDTO: CreateDependencyDTO, version?: string) {
         const dep = await this.dependencyModel
             .findOneAndUpdate(
                 createDependencyDTO,
@@ -47,11 +47,16 @@ export class DependenciesService {
             )
             .lean();
 
-        await this.dependencyQueue.add('get-dependency-info', dep, {
-            delay: 2000,
-            attempts: 2,
-            removeOnComplete: true,
-        });
+        await this.dependencyQueue.add(
+            'get-dependency-info',
+            { dep, version },
+            {
+                delay: 1000,
+                attempts: 2,
+                removeOnComplete: true,
+            },
+        );
+
         return dep;
     }
 
@@ -184,7 +189,13 @@ export class DependenciesService {
         };
     }
 
-    async getDependencyInfo(dep: DependencyDocument) {
+    async getDependencyInfo({
+        dep,
+        version,
+    }: {
+        dep: DependencyDocument;
+        version: string;
+    }) {
         try {
             const response = await firstValueFrom(
                 this.httpService.get(
@@ -252,6 +263,11 @@ export class DependenciesService {
                     { $set: updatedData },
                 );
             }
+            this.repositoryService.addVulnerability(
+                dep.dependencyName,
+                dep._id as string,
+                version,
+            );
         } catch (error) {
             console.error(
                 `Error fetching dependency info for ${dep.dependencyName}:`,
