@@ -1103,8 +1103,10 @@ export class RepositoryService {
                     quality: { $ifNull: ['$quality', null] },
                     popularity: { $ifNull: ['$popularity', null] },
                     license: 1,
-                    dependencyId: 1,
                 },
+            },
+            {
+                $sort: { name: 1 },
             },
             {
                 $facet: {
@@ -1114,7 +1116,7 @@ export class RepositoryService {
             },
         ];
 
-        return await this.DependencyRepositoryModel.aggregate(pipeline);
+        return await this.DependencyRepositoryModel.aggregate(pipeline as any);
     }
 
     // need to be uncommented when the function is used to update all dependencies to not deleted
@@ -1253,6 +1255,9 @@ export class RepositoryService {
                     licenseFamily: {
                         $first: '$licenseDetails.useCase.licenseFamily',
                     },
+                    name: {
+                        $first: '$licenseDetails.name',
+                    },
                     licenseId: { $first: '$licenseDetails._id' },
                 },
             },
@@ -1263,8 +1268,11 @@ export class RepositoryService {
                     dependencyCount: 1,
                     licenseRisk: { $ifNull: ['$licenseRisk', null] },
                     licenseFamily: { $ifNull: ['$licenseFamily', null] },
-                    licenseId: 1,
+                    name: { $ifNull: ['$name', null] },
                 },
+            },
+            {
+                $sort: { name: 1 },
             },
             {
                 $facet: {
@@ -1274,7 +1282,7 @@ export class RepositoryService {
             },
         ];
 
-        return await this.DependencyRepositoryModel.aggregate(pipeline);
+        return await this.DependencyRepositoryModel.aggregate(pipeline as any);
     }
 
     private async getRepoIds(repoId: string, userId: string) {
