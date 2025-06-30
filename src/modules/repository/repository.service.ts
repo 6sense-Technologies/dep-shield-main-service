@@ -525,14 +525,11 @@ export class RepositoryService {
             dependencyObj['packages'],
         );
 
-        // console.log(dependencyObj);
-
         for (const [dependency, dependencyData] of allDependencies) {
             if (!dependency) continue;
 
             const packageName = this.getPackageName(dependency);
             const packageVersion = dependencyData.version;
-            // if (!dependencyVersion[packageName].includes(packageVersion)) {
 
             let installedDep =
                 await this.dependencyService.findDependencyByName(packageName);
@@ -541,22 +538,14 @@ export class RepositoryService {
                 installedDep = await this.dependencyService.create({
                     dependencyName: packageName,
                 });
+            } else {
+                this.addVulnerability(
+                    packageName,
+                    installedDep._id.toString() as string,
+                    packageVersion,
+                    'npm',
+                );
             }
-            // let dependencyRepo;
-            // dependencyRepo = await this.DependencyRepositoryModel.findOne({
-            //     dependencyId: installedDep._id,
-            //     repositoryId: repo._id,
-            //     installedVersion: packageVersion,
-            // });
-            // if (!dependencyRepo) {
-            //     dependencyRepo =
-            //         await this.DependencyRepositoryModel.create({
-            //             dependencyId: installedDep._id,
-            //             repositoryId: repo._id,
-            //             installedVersion: packageVersion,
-            //         });
-            // }
-            //}
 
             await this.DependencyRepositoryModel.findOneAndUpdate(
                 {
@@ -574,26 +563,6 @@ export class RepositoryService {
                     upsert: true,
                 },
             ).lean();
-
-            // const dependencyVersion =
-            //     await this.dependencyService.getVersionByDepVersion(
-            //         installedDep._id as string,
-            //         packageVersion,
-            //     );
-
-            // const vulnerability =
-            //     await this.vulnerabilityService.getVulnerabilityByDependencyId(
-            //         installedDep._id as string,
-            //         dependencyVersion._id as string,
-            //     );
-
-            // if (!vulnerability) {
-            //     this.vulnerabilityService.create({
-            //         dependencyName: packageName,
-            //         ecosystem: 'npm',
-            //         version: packageVersion,
-            //     });
-            // }
 
             if (dependencyData.dependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
@@ -628,6 +597,34 @@ export class RepositoryService {
             message:
                 'Dependencies scanned successfully. It will take some time to process',
         };
+    }
+
+    async addVulnerability(
+        dependencyName: string,
+        dependencyId: string,
+        version: string,
+        ecosystem: string = 'npm',
+    ) {
+        console.log(dependencyName, dependencyId, version);
+        const dependencyVersion =
+            await this.dependencyService.getVersionByDepVersion(
+                dependencyId,
+                version,
+            );
+
+        const vulnerability =
+            await this.vulnerabilityService.getVulnerabilityByDependencyId(
+                dependencyId.toString(),
+                dependencyVersion._id.toString() as string,
+            );
+
+        if (!vulnerability) {
+            this.vulnerabilityService.create({
+                dependencyName,
+                ecosystem,
+                version,
+            });
+        }
     }
 
     async updateDefaultBranch(repoId: string, branchName: string) {
@@ -1150,20 +1147,6 @@ export class RepositoryService {
             },
             {
                 $lookup: {
-                    from: 'dependencyversions',
-                    localField: 'installedVersion',
-                    foreignField: 'version',
-                    as: 'dependencyVersion',
-                },
-            },
-            {
-                $unwind: {
-                    path: '$dependencyVersion',
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                $lookup: {
                     from: 'vulnerabilities',
                     localField: 'dependencyId',
                     foreignField: 'dependencyId',
@@ -1177,9 +1160,53 @@ export class RepositoryService {
                 },
             },
             {
+                $lookup: {
+                    from: 'dependencyversions',
+                    localField: 'installedVersion',
+                    foreignField: 'version',
+                    as: 'dependencyVersion',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependencyVersion',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
                 $match: {
-                    'vulnerability.dependencyVersionId':
-                        '$dependencyVersion._id',
+                    $expr: {
+                        $eq: [
+                            '$vulnerability.dependencyVersionId',
+                            '$dependencyVersion._id',
+                        ],
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencies',
+                    localField: 'dependencyId',
+                    foreignField: '_id',
+                    as: 'dependency',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependency',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $project: {
+                    name: '$vulnerability.cveId',
+                    discovered: '$vulnerability.published',
+                    dependencyName: '$dependency.dependencyName',
+                },
+            },
+            {
+                $sort: {
+                    name: 1,
                 },
             },
             {
@@ -1190,7 +1217,7 @@ export class RepositoryService {
             },
         ];
 
-        return await this.DependencyRepositoryModel.aggregate(pipeline);
+        return await this.DependencyRepositoryModel.aggregate(pipeline as any);
     }
 
     async getLicensesWithDependencyCount(
