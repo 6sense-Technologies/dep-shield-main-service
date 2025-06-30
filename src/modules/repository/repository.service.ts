@@ -611,7 +611,7 @@ export class RepositoryService {
 
             if (dependencyData.peerDependencies) {
                 for (const [subDep, subDepVersion] of Object.entries(
-                    dependencyData.dependencies,
+                    dependencyData.peerDependencies,
                 )) {
                     await this.registerSubDependency(
                         subDep,
