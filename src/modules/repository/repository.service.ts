@@ -462,7 +462,7 @@ export class RepositoryService {
     }
 
     getPackageName(path: string) {
-        const matches = path.match(/node_modules\/(@?[^\/]+)/g);
+        const matches = path.match(/node_modules\/(@[^\/]+\/[^\/]+|[^\/]+)/g);
         return matches ? matches.pop().replace('node_modules/', '') : null;
     }
 
