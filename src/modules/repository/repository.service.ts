@@ -608,6 +608,7 @@ export class RepositoryService {
         version: string,
         ecosystem: string = 'npm',
     ) {
+        console.log(dependencyName, dependencyId, version);
         const dependencyVersion =
             await this.dependencyService.getVersionByDepVersion(
                 dependencyId,
@@ -1147,20 +1148,6 @@ export class RepositoryService {
             },
             {
                 $lookup: {
-                    from: 'dependencyversions',
-                    localField: 'installedVersion',
-                    foreignField: 'version',
-                    as: 'dependencyVersion',
-                },
-            },
-            {
-                $unwind: {
-                    path: '$dependencyVersion',
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                $lookup: {
                     from: 'vulnerabilities',
                     localField: 'dependencyId',
                     foreignField: 'dependencyId',
@@ -1174,9 +1161,53 @@ export class RepositoryService {
                 },
             },
             {
+                $lookup: {
+                    from: 'dependencyversions',
+                    localField: 'installedVersion',
+                    foreignField: 'version',
+                    as: 'dependencyVersion',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependencyVersion',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
                 $match: {
-                    'vulnerability.dependencyVersionId':
-                        '$dependencyVersion._id',
+                    $expr: {
+                        $eq: [
+                            '$vulnerability.dependencyVersionId',
+                            '$dependencyVersion._id',
+                        ],
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencies',
+                    localField: 'dependencyId',
+                    foreignField: '_id',
+                    as: 'dependency',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependency',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $project: {
+                    name: '$vulnerability.cveId',
+                    discovered: '$vulnerability.published',
+                    dependencyName: '$dependency.dependencyName',
+                },
+            },
+            {
+                $sort: {
+                    name: 1,
                 },
             },
             {
@@ -1187,7 +1218,7 @@ export class RepositoryService {
             },
         ];
 
-        return await this.DependencyRepositoryModel.aggregate(pipeline);
+        return await this.DependencyRepositoryModel.aggregate(pipeline as any);
     }
 
     async getLicensesWithDependencyCount(
