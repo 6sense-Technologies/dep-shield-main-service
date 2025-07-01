@@ -11,8 +11,8 @@ import {
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { AccessTokenGuard } from '../auth/guards/accessToken.guard';
 import { CreateVulnerabilityDTO } from './dto/create-vulnerability.dto';
-import { VulnerabilitiesService } from './vulnerabilities.service';
 import { GetVulnerabilityDto } from './dto/getVulnerability.dto';
+import { VulnerabilitiesService } from './vulnerabilities.service';
 
 @Controller('vulnerabilities')
 export class VulnerabilitiesController {
@@ -60,11 +60,15 @@ export class VulnerabilitiesController {
     }
 
     @Get('test')
-    getVulnerability(@Param('cveId') cveId: string) {
+    getVulnerability(
+        @Query('dependencyName') dependencyName: string,
+        @Query('version') version: string,
+        @Query('ecosystem') ecosystem: string,
+    ) {
         return this.vulnerabilitiesService.getVulnerabilitiesFromOsv(
-            'axios',
-            '0.19.2',
-            'npm',
+            dependencyName,
+            version,
+            ecosystem,
         );
     }
 }
