@@ -71,4 +71,11 @@ export class VulnerabilitiesController {
             ecosystem,
         );
     }
+
+    @Get(':vulnId')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    getVulnerabilityDetails(@Param('vulnId') vulnId: string) {
+        return this.vulnerabilitiesService.getVulnerabilityDetails(vulnId);
+    }
 }

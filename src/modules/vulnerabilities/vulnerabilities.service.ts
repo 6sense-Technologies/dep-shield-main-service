@@ -294,6 +294,10 @@ export class VulnerabilitiesService {
         }
     }
 
+    getVulnerabilityDetails(vulnId: string) {
+        return this.vulnerabilityModel.findById(new Types.ObjectId(vulnId));
+    }
+
     async getVulnerabilitiesFromOsv(
         dependencyName: string,
         version: string,
