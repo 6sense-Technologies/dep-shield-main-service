@@ -256,6 +256,20 @@ export class RepositoryService {
                     },
                 );
             }
+            pipeline.push(
+                {
+                    $group: {
+                        _id: '$repoName',
+                        repoId: { $first: '$_id' },
+                    },
+                },
+                {
+                    $project: {
+                        _id: '$repoId',
+                        repoName: '$_id',
+                    },
+                },
+            );
         }
 
         pipeline.push({
