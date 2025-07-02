@@ -1082,6 +1082,16 @@ export class RepositoryService {
                 },
             },
             {
+                $match: {
+                    $expr: {
+                        $eq: [
+                            '$vulnerability.dependencyVersionId',
+                            '$installedVersion',
+                        ],
+                    },
+                },
+            },
+            {
                 $group: {
                     _id: '$dependency.dependencyName',
                     vulnerabilityCount: { $sum: 1 },
