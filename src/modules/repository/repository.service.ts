@@ -1092,16 +1092,16 @@ export class RepositoryService {
                     preserveNullAndEmptyArrays: true,
                 },
             },
-            {
-                $match: {
-                    $expr: {
-                        $eq: [
-                            '$vulnerability.dependencyVersionId',
-                            '$installedVersion',
-                        ],
-                    },
-                },
-            },
+            // {
+            //     $match: {
+            //         $expr: {
+            //             $eq: [
+            //                 '$vulnerability.dependencyVersionId', // will fix later for version
+            //                 '$installedVersion',
+            //             ],
+            //         },
+            //     },
+            // },
             {
                 $group: {
                     _id: '$dependency.dependencyName',
