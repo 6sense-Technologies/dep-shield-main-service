@@ -626,6 +626,11 @@ export class RepositoryService {
                 version,
             );
 
+        if (!dependencyVersion) {
+            console.log('Dependency version not found');
+            return;
+        }
+
         const vulnerability =
             await this.vulnerabilityService.getVulnerabilityByDependencyId(
                 dependencyId.toString(),
@@ -1226,6 +1231,7 @@ export class RepositoryService {
                     name: '$vulnerability.cveId',
                     discovered: '$vulnerability.published',
                     dependencyName: '$dependency.dependencyName',
+                    _id: '$vulnerability._id',
                 },
             },
             {

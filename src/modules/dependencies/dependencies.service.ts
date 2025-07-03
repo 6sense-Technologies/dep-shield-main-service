@@ -211,19 +211,24 @@ export class DependenciesService {
             let updatedData = {};
             if (response.data) {
                 const data = this.parseNPMRegistryData(response.data);
-                data.versions.forEach(async (version) => {
-                    await this.dependencyVersionModel.updateOne(
-                        { versionId: version.versionId, dependencyId: dep._id },
-                        {
-                            $set: {
-                                version: version.version,
+                await Promise.all(
+                    data.versions.map(async (version) => {
+                        await this.dependencyVersionModel.updateOne(
+                            {
                                 versionId: version.versionId,
-                                publishDate: version.publishDate,
+                                dependencyId: dep._id,
                             },
-                        },
-                        { upsert: true },
-                    );
-                });
+                            {
+                                $set: {
+                                    version: version.version,
+                                    versionId: version.versionId,
+                                    publishDate: version.publishDate,
+                                },
+                            },
+                            { upsert: true },
+                        );
+                    }),
+                );
 
                 updatedData = {
                     ...updatedData,
@@ -263,11 +268,13 @@ export class DependenciesService {
                     { $set: updatedData },
                 );
             }
-            this.repositoryService.addVulnerability(
-                dep.dependencyName,
-                dep._id as string,
-                version,
-            );
+            if (response.data) {
+                this.repositoryService.addVulnerability(
+                    dep.dependencyName,
+                    dep._id as string,
+                    version,
+                );
+            }
         } catch (error) {
             console.error(
                 `Error fetching dependency info for ${dep.dependencyName}:`,
