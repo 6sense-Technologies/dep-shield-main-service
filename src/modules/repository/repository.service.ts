@@ -11,6 +11,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { firstValueFrom } from 'rxjs';
 import {
+    SharedRepository,
+    SharedRepositoryDocument,
+} from 'src/database/shared-repository-schema/shared-repository.schema';
+import {
     DependencyRepository,
     DependencyRepositoryDocument,
 } from '../../database/dependency-repository-schema/dependency-repository.schema';
@@ -27,6 +31,7 @@ import { DependenciesService } from '../dependencies/dependencies.service';
 import { GithubAppService } from '../github-app/github-app.service';
 import { VulnerabilitiesService } from '../vulnerabilities/vulnerabilities.service';
 import { GetRepositoryDto } from './dto/getRepository.dto';
+import { GetSharedRepoDto } from './dto/getSharedRepo.dto';
 import { validatePagination } from './validator/pagination.validator';
 @Injectable()
 export class RepositoryService {
@@ -43,6 +48,8 @@ export class RepositoryService {
         private GithubAppModel: Model<GithubAppDocument>,
         @InjectModel(DependencyRepository.name)
         private DependencyRepositoryModel: Model<DependencyRepositoryDocument>,
+        @InjectModel(SharedRepository.name)
+        private SharedRepositoryModel: Model<SharedRepositoryDocument>,
     ) {}
     // onModuleInit() {
     //     this.watchRepositorySelection(); // listent to db changes
@@ -136,8 +143,11 @@ export class RepositoryService {
     }
 
     async getRepoDetails(repoId: string, userId: string) {
+        if (isValidObjectId(repoId) === false) {
+            throw new BadRequestException('Invalid repository ID');
+        }
         const repo = await this.RepositoryModel.findOne({
-            _id: repoId,
+            _id: new Types.ObjectId(repoId),
             isDeleted: false,
             user: new Types.ObjectId(userId),
         }).lean();
@@ -610,6 +620,68 @@ export class RepositoryService {
         return {
             message:
                 'Dependencies scanned successfully. It will take some time to process',
+        };
+    }
+
+    async shareRepository(repoId: string, userId: string, sharedWith: string) {
+        const repo = await this.RepositoryModel.findOne({
+            _id: repoId,
+            user: new Types.ObjectId(userId),
+            isDeleted: false,
+        });
+
+        if (!repo) {
+            throw new NotFoundException('Repository not found');
+        }
+
+        await this.SharedRepositoryModel.create({
+            repositoryId: repo._id,
+            sharedWith: new Types.ObjectId(sharedWith),
+            sharedBy: new Types.ObjectId(userId),
+            isDeleted: false,
+        });
+
+        return {
+            message: 'Repository shared successfully',
+        };
+    }
+
+    // update later with proper requirements
+    async getSharedRepositories(userId: string, query: GetSharedRepoDto) {
+        const sharedRepos = await this.SharedRepositoryModel.find({
+            sharedWith: new Types.ObjectId(userId),
+            isDeleted: false,
+        });
+
+        return sharedRepos;
+    }
+
+    async unshareRepository(
+        repoId: string,
+        userId: string,
+        sharedWith: string,
+    ) {
+        const sharedRepo = await this.SharedRepositoryModel.findOne({
+            repositoryId: new Types.ObjectId(repoId),
+            sharedWith: new Types.ObjectId(sharedWith),
+            sharedBy: new Types.ObjectId(userId),
+        });
+
+        if (!sharedRepo) {
+            throw new NotFoundException('Repository not found');
+        }
+
+        await this.SharedRepositoryModel.findOneAndUpdate(
+            {
+                repositoryId: new Types.ObjectId(repoId),
+                sharedWith: new Types.ObjectId(sharedWith),
+                sharedBy: new Types.ObjectId(userId),
+            },
+            { $set: { isDeleted: true } },
+        );
+
+        return {
+            message: 'Repository unshared successfully',
         };
     }
 

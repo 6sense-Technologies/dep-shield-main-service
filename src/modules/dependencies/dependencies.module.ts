@@ -1,6 +1,7 @@
 import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { SharedRepositorySchemaModule } from 'src/database/shared-repository-schema/shared-repository-schema.module';
 import { DependencyRepositorySchemaModule } from '../../database/dependency-repository-schema/dependency-repository-schema.module';
 import { DependencySchemaModule } from '../../database/dependency-schema/dependency-schema.module';
 import { GithubAppSchemaModule } from '../../database/githubapp-schema/github-app-schema.module';
@@ -25,6 +26,7 @@ import { DependenciesService } from './dependencies.service';
         GithubAppSchemaModule,
         DependencyRepositorySchemaModule,
         VulnerabilitiesModule,
+        SharedRepositorySchemaModule,
     ],
     controllers: [DependenciesController],
     providers: [
