@@ -2,6 +2,7 @@ import { HttpModule } from '@nestjs/axios'; // Import HttpModule
 import { Module } from '@nestjs/common';
 import { RepositoryService } from './repository.service';
 
+import { SharedRepositorySchemaModule } from 'src/database/shared-repository-schema/shared-repository-schema.module';
 import { DependencyRepositorySchemaModule } from '../../database/dependency-repository-schema/dependency-repository-schema.module';
 import { GithubAppSchemaModule } from '../../database/githubapp-schema/github-app-schema.module';
 import { RepositorySchemaModule } from '../../database/repository-schema/repository-schema.module';
@@ -20,6 +21,7 @@ import { RepositoryController } from './repository.controller';
         DependenciesModule,
         GithubAppModule,
         VulnerabilitiesModule,
+        SharedRepositorySchemaModule,
     ], // Add HttpModule to imports
     controllers: [RepositoryController],
     providers: [RepositoryService],

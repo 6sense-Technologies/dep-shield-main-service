@@ -19,6 +19,8 @@ import {
     SelectRepoUrlSingleDTO,
 } from './dto/bulkselect.dto';
 import { GetRepositoryDto } from './dto/getRepository.dto';
+import { GetSharedRepoDto } from './dto/getSharedRepo.dto';
+import { ShareRepoDto } from './dto/shareRepository.dto';
 // import { SelectRepoUrlDto } from './dto/github.dto';
 
 @Controller('repositories')
@@ -168,6 +170,41 @@ export class RepositoryController {
     // async makeActiveDependencyRepo() {
     //     return await this.repositoryService.updateAllDependencyRepo();
     // }
+
+    @Post('share-repo')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async shareRepo(@Body() shareRepoDto: ShareRepoDto, @Req() req: Request) {
+        return this.repositoryService.shareRepository(
+            shareRepoDto.repoId,
+            req['user'].userId,
+            shareRepoDto.sharedWith,
+        );
+    }
+
+    @Get('shared-repos')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async getSharedRepos(
+        @Req() req: Request,
+        @Query() query: GetSharedRepoDto,
+    ) {
+        return this.repositoryService.getSharedRepositories(
+            req['user'].userId,
+            query,
+        );
+    }
+
+    @Post('unshare-repo')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async unshareRepo(@Body() shareRepoDto: ShareRepoDto, @Req() req: Request) {
+        return this.repositoryService.unshareRepository(
+            shareRepoDto.repoId,
+            req['user'].userId,
+            shareRepoDto.sharedWith,
+        );
+    }
 
     @Get(':repoId')
     @ApiBearerAuth()
