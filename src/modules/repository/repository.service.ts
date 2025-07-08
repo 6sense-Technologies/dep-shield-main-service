@@ -1299,11 +1299,19 @@ export class RepositoryService {
                 },
             },
             {
+                $group: {
+                    _id: '$vulnerability.cveId',
+                    dependencyName: { $first: '$dependency.dependencyName' },
+                    discovered: { $first: '$vulnerability.published' },
+                    vulnerabilityId: { $first: '$vulnerability._id' },
+                },
+            },
+            {
                 $project: {
-                    name: '$vulnerability.cveId',
-                    discovered: '$vulnerability.published',
-                    dependencyName: '$dependency.dependencyName',
-                    _id: '$vulnerability._id',
+                    name: '$_id',
+                    discovered: '$discovered',
+                    dependencyName: '$dependencyName',
+                    _id: '$vulnerabilityId',
                 },
             },
             {
