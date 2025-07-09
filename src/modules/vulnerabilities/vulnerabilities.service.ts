@@ -294,8 +294,91 @@ export class VulnerabilitiesService {
         }
     }
 
-    getVulnerabilityDetails(vulnId: string) {
-        return this.vulnerabilityModel.findById(new Types.ObjectId(vulnId));
+    async getVulnerabilityDetails(vulnId: string) {
+        // return this.vulnerabilityModel.findById(new Types.ObjectId(vulnId));
+        const vulnerabilityPipeline = [
+            {
+                $match: {
+                    _id: new Types.ObjectId(vulnId),
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencies',
+                    localField: 'dependencyId',
+                    foreignField: '_id',
+                    as: 'dependency',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependency',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'vulnerabilityversions',
+                    localField: '_id',
+                    foreignField: 'vulnerability',
+                    as: 'vulnerabilityVersions',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$vulnerabilityVersions',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'dependencyversions',
+                    localField: 'vulnerabilityVersions.dependencyVersion',
+                    foreignField: '_id',
+                    as: 'dependencyVersions',
+                },
+            },
+            {
+                $unwind: {
+                    path: '$dependencyVersions',
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $project: {
+                    _id: 1,
+                    cveId: 1,
+                    published: 1,
+                    dependencyName: '$dependency.dependencyName',
+                    nvdDescription: 1,
+                    references: 1,
+                    severity: 1,
+                    'vulnerabilityVersions.status': 1,
+                    'vulnerabilityVersions.version':
+                        '$dependencyVersions.version',
+                },
+            },
+            {
+                $group: {
+                    _id: '$_id',
+                    cveId: { $first: '$cveId' },
+                    published: { $first: '$published' },
+                    dependencyName: { $first: '$dependencyName' },
+                    nvdDescription: { $first: '$nvdDescription' },
+                    references: { $first: '$references' },
+                    severity: { $first: '$severity' },
+                    vulnerabilityHistory: {
+                        $push: '$vulnerabilityVersions',
+                    },
+                },
+            },
+        ];
+
+        const vulnerability = await this.vulnerabilityModel.aggregate(
+            vulnerabilityPipeline,
+        );
+
+        return vulnerability;
     }
 
     async getVulnerabilitiesFromOsv(
