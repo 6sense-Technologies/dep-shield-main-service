@@ -378,7 +378,7 @@ export class VulnerabilitiesService {
             vulnerabilityPipeline,
         );
 
-        return vulnerability;
+        return vulnerability?.[0];
     }
 
     async getVulnerabilitiesFromOsv(
