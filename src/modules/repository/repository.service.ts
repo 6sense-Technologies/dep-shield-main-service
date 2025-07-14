@@ -213,7 +213,7 @@ export class RepositoryService {
             },
         );
 
-        if (query.dependencyId || query.license) {
+        if (query.dependencyId || query.license || query.vulnerabilityId) {
             pipeline.push(
                 {
                     $lookup: {
@@ -230,6 +230,56 @@ export class RepositoryService {
                     },
                 },
             );
+
+            if (query.vulnerabilityId) {
+                pipeline.push(
+                    {
+                        $lookup: {
+                            from: 'vulnerabilities',
+                            localField: 'dependencyRepo.dependencyId',
+                            foreignField: 'dependencyId',
+                            as: 'vulnerability',
+                        },
+                    },
+                    {
+                        $unwind: {
+                            path: '$vulnerability',
+                            preserveNullAndEmptyArrays: false,
+                        },
+                    },
+                    {
+                        $match: {
+                            'vulnerability._id': new Types.ObjectId(
+                                query.vulnerabilityId,
+                            ),
+                        },
+                    },
+                    {
+                        $lookup: {
+                            from: 'dependencyversions',
+                            localField: 'vulnerability.dependencyVersionId',
+                            foreignField: '_id',
+                            as: 'dependencyVersion',
+                        },
+                    },
+                    {
+                        $unwind: {
+                            path: '$dependencyVersion',
+                            preserveNullAndEmptyArrays: false,
+                        },
+                    },
+                    {
+                        $match: {
+                            $expr: {
+                                $eq: [
+                                    '$dependencyRepo.installedVersion',
+                                    '$dependencyVersion.version',
+                                ],
+                            },
+                        },
+                    },
+                );
+            }
 
             if (query.dependencyId) {
                 pipeline.push({
