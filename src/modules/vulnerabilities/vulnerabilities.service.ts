@@ -320,7 +320,7 @@ export class VulnerabilitiesService {
                 $lookup: {
                     from: 'vulnerabilityversions',
                     localField: '_id',
-                    foreignField: 'vulnerability',
+                    foreignField: 'vulnerabilityId',
                     as: 'vulnerabilityVersions',
                 },
             },
@@ -333,7 +333,7 @@ export class VulnerabilitiesService {
             {
                 $lookup: {
                     from: 'dependencyversions',
-                    localField: 'vulnerabilityVersions.dependencyVersion',
+                    localField: 'vulnerabilityVersions.dependencyVersionId',
                     foreignField: '_id',
                     as: 'dependencyVersions',
                 },
