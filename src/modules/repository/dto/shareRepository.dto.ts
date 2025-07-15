@@ -1,4 +1,4 @@
-import { IsMongoId, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsMongoId, IsNotEmpty } from 'class-validator';
 
 export class ShareRepoDto {
     @IsNotEmpty()
@@ -6,6 +6,6 @@ export class ShareRepoDto {
     repoId: string;
 
     @IsNotEmpty()
-    @IsMongoId()
+    @IsEmail()
     sharedWith: string;
 }

@@ -28,6 +28,7 @@ import {
 } from '../../database/repository-schema/repository.schema';
 import { User, UserDocument } from '../../database/user-schema/user.schema';
 import { DependenciesService } from '../dependencies/dependencies.service';
+import { EmailService } from '../email/email.service';
 import { GithubAppService } from '../github-app/github-app.service';
 import { VulnerabilitiesService } from '../vulnerabilities/vulnerabilities.service';
 import { GetRepositoryDto } from './dto/getRepository.dto';
@@ -39,6 +40,7 @@ export class RepositoryService {
         private readonly httpService: HttpService,
         private readonly githubAppService: GithubAppService,
         private readonly dependencyService: DependenciesService,
+        private readonly emailService: EmailService,
         @Inject(forwardRef(() => VulnerabilitiesService))
         private readonly vulnerabilityService: VulnerabilitiesService,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
@@ -684,9 +686,34 @@ export class RepositoryService {
             throw new NotFoundException('Repository not found');
         }
 
+        const user = await this.userModel.findOne({
+            emailAddress: sharedWith,
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const existingSharedRepo = await this.SharedRepositoryModel.findOne({
+            repositoryId: repo._id,
+            sharedWith: user._id,
+            isDeleted: false,
+        });
+
+        if (existingSharedRepo) {
+            throw new BadRequestException('Repository already shared');
+        }
+
+        // TODO: send email to the user
+        await this.emailService.sendRepositoryShareEmail(
+            sharedWith,
+            repo.repoName,
+            user.displayName,
+        );
+
         await this.SharedRepositoryModel.create({
             repositoryId: repo._id,
-            sharedWith: new Types.ObjectId(sharedWith),
+            sharedWith: user._id,
             sharedBy: new Types.ObjectId(userId),
             isDeleted: false,
         });
