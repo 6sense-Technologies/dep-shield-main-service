@@ -116,6 +116,7 @@ pipeline {
                 [infisicalKey: 'SALT_ROUND'],
                 [infisicalKey: 'JWT_EXPIRE_REFRESH_TOKEN'],
                 [infisicalKey: 'JWT_EXPIRE'],
+                [infisicalKey: 'JWT_SECRET'],
                 [infisicalKey: 'JWT_REFRESH_SECRET'],
                 [infisicalKey: 'REDIS_URL'],
               ]
@@ -138,6 +139,7 @@ EMAIL_HOST=${EMAIL_HOST}
 SALT_ROUND=${SALT_ROUND}
 JWT_EXPIRE_REFRESH_TOKEN=${JWT_EXPIRE_REFRESH_TOKEN}
 JWT_EXPIRE=${JWT_EXPIRE}
+JWT_SECRET=${JWT_SECRET}
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 REDIS_URL=${REDIS_URL}
 CONTAINER_NAME=${deployDir}
