@@ -725,12 +725,73 @@ export class RepositoryService {
 
     // update later with proper requirements
     async getSharedRepositories(userId: string, query: GetSharedRepoDto) {
-        const sharedRepos = await this.SharedRepositoryModel.find({
-            sharedWith: new Types.ObjectId(userId),
-            isDeleted: false,
-        });
+        if (!query.limit || !query.page) {
+            throw new BadRequestException('Limit and page are required');
+        }
+        const page = parseInt(query.page);
+        const limit = parseInt(query.limit);
 
-        return sharedRepos;
+        const sharedRepositoryPipeline = [
+            {
+                $match: {
+                    sharedWith: new Types.ObjectId(userId),
+                    isDeleted: false,
+                },
+            },
+            {
+                $lookup: {
+                    from: 'repositories',
+                    localField: 'repositoryId',
+                    foreignField: '_id',
+                    as: 'repository',
+                },
+            },
+            {
+                $unwind: '$repository',
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'sharedBy',
+                    foreignField: '_id',
+                    as: 'sharedBy',
+                },
+            },
+            {
+                $unwind: '$sharedBy',
+            },
+            {
+                $sort: {
+                    createdAt: -1,
+                },
+            },
+            {
+                $project: {
+                    _id: 1,
+                    repositoryName: '$repository.repoName',
+                    sharedByName: '$sharedBy.displayName',
+                    avatarUrl: '$sharedBy.avatarUrl',
+                },
+            },
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }],
+                    data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+                },
+            },
+        ];
+
+        const sharedRepos = await this.SharedRepositoryModel.aggregate(
+            sharedRepositoryPipeline as any,
+        );
+
+        const data = sharedRepos[0].data;
+        const count =
+            sharedRepos[0].metadata.length > 0
+                ? sharedRepos[0].metadata[0].total
+                : 0;
+
+        return { data, count };
     }
 
     async unshareRepository(
