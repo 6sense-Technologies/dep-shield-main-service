@@ -5,15 +5,11 @@ LABEL org.opencontainers.image.source="https://github.com/6sense-Technologies/de
 WORKDIR /dep-shield-main-service
 
 COPY package*.json ./
-
 RUN npm install
 
 COPY . .
 
 RUN npm run build
 
-COPY src/uploads dist/src/uploads
-
 EXPOSE 3000
-
 CMD ["npm", "run", "start:prod"]
