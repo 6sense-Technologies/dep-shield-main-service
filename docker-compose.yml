@@ -1,28 +1,34 @@
 services:
-    # NestJS Application
-    app:
+    dep-shield-main-service:
+        image: ghcr.io/6sense-technologies/dep-shield-main-service:${IMAGE_TAG}
+        container_name: ${CONTAINER_NAME}
         build:
             context: .
             target: production
         ports:
-            - '3000:3000'
-        env_file:
-            - .env
-        depends_on:
-            - redis
+            - "${HOST_PORT}:3000"
+        environment:
+          - NODE_ENV=production
+          - HOST_PORT=${HOST_PORT}
+          - MONGODB_URI=${MONGODB_URI}
+          - GITHUB_APP_CLIENT_ID=${GITHUB_APP_CLIENT_ID}
+          - GITHUB_APP_ID=${GITHUB_APP_ID}
+          - GITHUB_PRIVATE_KEY=${GITHUB_PRIVATE_KEY}
+          - EMAIL_SENDER=${EMAIL_SENDER}
+          - EMAIL_SERVICE_PORT=${EMAIL_SERVICE_PORT}
+          - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+          - EMAIL_USERNAME=${EMAIL_USERNAME}
+          - EMAIL_HOST=${EMAIL_HOST}
+          - SALT_ROUND=${SALT_ROUND}
+          - JWT_EXPIRE_REFRESH_TOKEN=${JWT_EXPIRE_REFRESH_TOKEN}
+          - JWT_EXPIRE=${JWT_EXPIRE}
+          - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+          - REDIS_URL=${REDIS_URL}
         restart: unless-stopped
         networks:
-            - dep-shield-network
-
-    # Redis Cache
-    redis:
-        image: redis:7.2-alpine
-        ports:
-            - '6379:6379'
-        restart: unless-stopped
-        networks:
-            - dep-shield-network
+            - 6sensehq_net
 
 networks:
-    dep-shield-network:
-        driver: bridge
+  6sensehq_net:
+    external: true
+    name: 6sensehq-network
