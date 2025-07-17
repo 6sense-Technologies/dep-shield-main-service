@@ -22,6 +22,7 @@ services:
           - SALT_ROUND=${SALT_ROUND}
           - JWT_EXPIRE_REFRESH_TOKEN=${JWT_EXPIRE_REFRESH_TOKEN}
           - JWT_EXPIRE=${JWT_EXPIRE}
+          - JWT_SECRET=${JWT_SECRET}
           - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
           - REDIS_URL=${REDIS_URL}
         restart: unless-stopped
