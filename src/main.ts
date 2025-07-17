@@ -35,6 +35,6 @@ async function bootstrap() {
       'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.css',
     ],
   });
-  await app.listen(8000, '0.0.0.0');
+  await app.listen(3000);
 }
 bootstrap();
