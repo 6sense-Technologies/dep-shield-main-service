@@ -694,6 +694,12 @@ export class RepositoryService {
             throw new NotFoundException('User not found');
         }
 
+        if (user._id.toString() === userId) {
+            throw new BadRequestException(
+                'You cannot share repository with yourself',
+            );
+        }
+
         const existingSharedRepo = await this.SharedRepositoryModel.findOne({
             repositoryId: repo._id,
             sharedWith: user._id,
@@ -721,6 +727,39 @@ export class RepositoryService {
         return {
             message: 'Repository shared successfully',
         };
+    }
+
+    async getUsersBySharedRepository(repoId: string, userId: string) {
+        const sharedUsersPipeline = [
+            {
+                $match: {
+                    repositoryId: new Types.ObjectId(repoId),
+                },
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'sharedWith',
+                    foreignField: '_id',
+                    as: 'sharedWith',
+                },
+            },
+            {
+                $unwind: '$sharedWith',
+            },
+            {
+                $project: {
+                    _id: 1,
+                    displayName: '$sharedWith.displayName',
+                    avatarUrl: '$sharedWith.avatarUrl',
+                },
+            },
+            {
+                $sort: {
+                    createdAt: -1,
+                },
+            },
+        ];
     }
 
     // update later with proper requirements
@@ -771,6 +810,8 @@ export class RepositoryService {
                     repositoryName: '$repository.repoName',
                     sharedByName: '$sharedBy.displayName',
                     avatarUrl: '$sharedBy.avatarUrl',
+                    repositoryId: '$repository._id',
+                    sharedById: '$sharedBy._id',
                 },
             },
             {
