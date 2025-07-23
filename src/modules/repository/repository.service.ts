@@ -729,11 +729,22 @@ export class RepositoryService {
         };
     }
 
-    async getUsersBySharedRepository(repoId: string, userId: string) {
+    async getUsersBySharedRepository(
+        repoId: string,
+        userId: string,
+        page: number,
+        limit: number,
+    ) {
+        if (!page || !limit) {
+            throw new BadRequestException('Page and limit are required');
+        }
+
         const sharedUsersPipeline = [
             {
                 $match: {
                     repositoryId: new Types.ObjectId(repoId),
+                    sharedBy: new Types.ObjectId(userId),
+                    isDeleted: false,
                 },
             },
             {
@@ -759,7 +770,25 @@ export class RepositoryService {
                     createdAt: -1,
                 },
             },
+            {
+                $facet: {
+                    metadata: [{ $count: 'total' }],
+                    data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+                },
+            },
         ];
+
+        const sharedUsers = await this.SharedRepositoryModel.aggregate(
+            sharedUsersPipeline as any,
+        );
+
+        const data = sharedUsers[0].data;
+        const count =
+            sharedUsers[0].metadata.length > 0
+                ? sharedUsers[0].metadata[0].total
+                : 0;
+
+        return { data, count };
     }
 
     // update later with proper requirements

@@ -182,6 +182,23 @@ export class RepositoryController {
         );
     }
 
+    @Get(':repoId/shared-users')
+    @ApiBearerAuth()
+    @UseGuards(AccessTokenGuard)
+    async getSharedUsers(
+        @Param('repoId') repoId: string,
+        @Req() req: Request,
+        @Query('page') page: string,
+        @Query('limit') limit: string,
+    ) {
+        return this.repositoryService.getUsersBySharedRepository(
+            repoId,
+            req['user'].userId,
+            +page,
+            +limit,
+        );
+    }
+
     @Get('shared-repos')
     @ApiBearerAuth()
     @UseGuards(AccessTokenGuard)
