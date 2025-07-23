@@ -43,6 +43,7 @@ export class LicensesController {
         @Query('repoId') repoId: string,
         @Query('page') page: string,
         @Query('limit') limit: string,
+        @Query('search') search: string,
         @Req() req: Request,
     ) {
         return this.licensesService.getLicensesWithDependencyCount(
@@ -50,6 +51,7 @@ export class LicensesController {
             repoId,
             +page,
             +limit,
+            search,
         );
     }
 }
