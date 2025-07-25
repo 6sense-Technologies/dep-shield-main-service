@@ -1,7 +1,7 @@
 import {
-    Processor,
-    OnWorkerEvent,
     OnQueueEvent,
+    OnWorkerEvent,
+    Processor,
     WorkerHost,
 } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
@@ -65,7 +65,6 @@ export class VulnerabilityConsumer extends WorkerHost {
                     break;
                 case 'get-cve-info':
                     await this.vulnerabilitiesService.getCVEInfoFromNVD(
-                        job.data.vuln.cveId,
                         job.data.vuln,
                     );
                     break;

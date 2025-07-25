@@ -10,4 +10,6 @@ export class GetRepositoryDto {
     dependencyId?: string;
     @IsOptional()
     license?: string;
+    @IsOptional()
+    vulnerabilityId?: string;
 }

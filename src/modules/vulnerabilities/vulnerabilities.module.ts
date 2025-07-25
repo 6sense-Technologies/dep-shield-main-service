@@ -1,6 +1,8 @@
 import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { OTPSecretSchemaModule } from 'src/database/otpsecret-schema/otp-secret-schema.module';
+import { SharedRepositorySchemaModule } from 'src/database/shared-repository-schema/shared-repository-schema.module';
 import { DependencyRepositorySchemaModule } from '../../database/dependency-repository-schema/dependency-repository-schema.module';
 import { DependencySchemaModule } from '../../database/dependency-schema/dependency-schema.module';
 import { GithubAppSchemaModule } from '../../database/githubapp-schema/github-app-schema.module';
@@ -8,6 +10,8 @@ import { RepositorySchemaModule } from '../../database/repository-schema/reposit
 import { UserSchemaModule } from '../../database/user-schema/user-schema.module';
 import { VulnerabilitySchemaModule } from '../../database/vulnerability-schema/vulnerability-schema.module';
 import { DependenciesService } from '../dependencies/dependencies.service';
+import { EmailModule } from '../email/email.module';
+import { EmailService } from '../email/email.service';
 import { GithubAppService } from '../github-app/github-app.service';
 import { RepositoryService } from '../repository/repository.service';
 import { VulnerabilityConsumer } from './vulnerabilities.consumer';
@@ -30,6 +34,9 @@ import { VulnerabilitiesService } from './vulnerabilities.service';
         GithubAppSchemaModule,
         DependencySchemaModule,
         DependencyRepositorySchemaModule,
+        SharedRepositorySchemaModule,
+        EmailModule,
+        OTPSecretSchemaModule,
     ],
     controllers: [VulnerabilitiesController],
     providers: [
@@ -38,6 +45,7 @@ import { VulnerabilitiesService } from './vulnerabilities.service';
         DependenciesService,
         RepositoryService,
         GithubAppService,
+        EmailService,
     ],
     exports: [VulnerabilitiesService],
 })

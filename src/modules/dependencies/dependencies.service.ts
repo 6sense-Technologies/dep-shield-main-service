@@ -35,7 +35,7 @@ export class DependenciesService {
         @InjectQueue('dependency') private dependencyQueue: Queue,
     ) {}
 
-    async create(createDependencyDTO: CreateDependencyDTO) {
+    async create(createDependencyDTO: CreateDependencyDTO, version?: string) {
         const dep = await this.dependencyModel
             .findOneAndUpdate(
                 createDependencyDTO,
@@ -47,11 +47,16 @@ export class DependenciesService {
             )
             .lean();
 
-        await this.dependencyQueue.add('get-dependency-info', dep, {
-            delay: 2000,
-            attempts: 2,
-            removeOnComplete: true,
-        });
+        await this.dependencyQueue.add(
+            'get-dependency-info',
+            { dep, version },
+            {
+                delay: 1000,
+                attempts: 2,
+                removeOnComplete: true,
+            },
+        );
+
         return dep;
     }
 
@@ -184,7 +189,13 @@ export class DependenciesService {
         };
     }
 
-    async getDependencyInfo(dep: DependencyDocument) {
+    async getDependencyInfo({
+        dep,
+        version,
+    }: {
+        dep: DependencyDocument;
+        version: string;
+    }) {
         try {
             const response = await firstValueFrom(
                 this.httpService.get(
@@ -200,19 +211,24 @@ export class DependenciesService {
             let updatedData = {};
             if (response.data) {
                 const data = this.parseNPMRegistryData(response.data);
-                data.versions.forEach(async (version) => {
-                    await this.dependencyVersionModel.updateOne(
-                        { versionId: version.versionId, dependencyId: dep._id },
-                        {
-                            $set: {
-                                version: version.version,
+                await Promise.all(
+                    data.versions.map(async (version) => {
+                        await this.dependencyVersionModel.updateOne(
+                            {
                                 versionId: version.versionId,
-                                publishDate: version.publishDate,
+                                dependencyId: dep._id,
                             },
-                        },
-                        { upsert: true },
-                    );
-                });
+                            {
+                                $set: {
+                                    version: version.version,
+                                    versionId: version.versionId,
+                                    publishDate: version.publishDate,
+                                },
+                            },
+                            { upsert: true },
+                        );
+                    }),
+                );
 
                 updatedData = {
                     ...updatedData,
@@ -250,6 +266,13 @@ export class DependenciesService {
                 await this.dependencyModel.updateOne(
                     { dependencyName: dep.dependencyName },
                     { $set: updatedData },
+                );
+            }
+            if (response.data) {
+                this.repositoryService.addVulnerability(
+                    dep.dependencyName,
+                    dep._id as string,
+                    version,
                 );
             }
         } catch (error) {

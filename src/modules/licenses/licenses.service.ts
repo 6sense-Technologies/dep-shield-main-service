@@ -52,6 +52,7 @@ export class LicensesService {
         repoId: string,
         page: number,
         limit: number,
+        search: string,
     ) {
         if (!page || !limit) {
             throw new BadRequestException('Page and limit are required');
@@ -63,6 +64,7 @@ export class LicensesService {
                 repoId,
                 page,
                 limit,
+                search,
             );
 
         const data = result[0].data;

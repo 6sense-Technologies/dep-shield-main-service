@@ -5,6 +5,7 @@ import {
     forwardRef,
     Inject,
     Injectable,
+    InternalServerErrorException,
     Logger,
     NotFoundException,
 } from '@nestjs/common';
@@ -43,16 +44,26 @@ export class VulnerabilitiesService {
     ) {}
 
     async create(createVulnerabilityDTO: CreateVulnerabilityDTO) {
-        await this.vulnerabilityQueue.add(
-            'get-vulnerability-info',
-            createVulnerabilityDTO,
-            {
-                delay: 1000,
-                attempts: 2,
-                removeOnComplete: true,
-                // repeat: { every: 24 * 60 * 60 * 1000 },
-            },
-        );
+        try {
+            await this.vulnerabilityQueue.add(
+                'get-vulnerability-info',
+                createVulnerabilityDTO,
+                {
+                    delay: 1000,
+                    attempts: 2,
+                    removeOnComplete: true,
+                    // repeat: { every: 24 * 60 * 60 * 1000 },
+                },
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error creating vulnerability: ${error.message}`,
+                error.stack,
+            );
+            throw new InternalServerErrorException(
+                'Failed to create vulnerability',
+            );
+        }
     }
 
     async getVulnerabilities(
@@ -64,22 +75,73 @@ export class VulnerabilitiesService {
         if (!page || !limit) {
             throw new BadRequestException('Page and limit are required');
         }
+
+        try {
+            const result = await this.repositoryService.getVulnerabilities(
+                userId,
+                repoId,
+                page,
+                limit,
+            );
+
+            const data = result[0]?.data || [];
+            const count =
+                result[0]?.metadata?.length > 0
+                    ? result[0].metadata[0].total
+                    : 0;
+
+            return { data, count };
+        } catch (error) {
+            this.logger.error(
+                `Error getting vulnerabilities: ${error.message}`,
+                error.stack,
+            );
+            throw new InternalServerErrorException(
+                'Failed to retrieve vulnerabilities',
+            );
+        }
     }
 
-    async getVulnerabilityByDependencyId(dependencyId: string) {
-        return await this.vulnerabilityModel
-            .findOne({
-                dependencyId: new Types.ObjectId(dependencyId),
-            })
-            .lean();
+    async getVulnerabilityByDependencyId(
+        dependencyId: string,
+        dependencyVersionId: string,
+    ) {
+        try {
+            return await this.vulnerabilityModel
+                .findOne({
+                    dependencyId: new Types.ObjectId(dependencyId),
+                    dependencyVersionId: new Types.ObjectId(
+                        dependencyVersionId,
+                    ),
+                })
+                .lean();
+        } catch (error) {
+            this.logger.error(
+                `Error getting vulnerability by dependency ID: ${error.message}`,
+                error.stack,
+            );
+            throw new InternalServerErrorException(
+                'Failed to retrieve vulnerability',
+            );
+        }
     }
 
     async getByCVEId(cveId: string) {
-        return await this.vulnerabilityModel
-            .findOne({
-                cveId,
-            })
-            .populate('dependencyId');
+        try {
+            return await this.vulnerabilityModel
+                .findOne({
+                    cveId,
+                })
+                .populate('dependencyId');
+        } catch (error) {
+            this.logger.error(
+                `Error getting vulnerability by CVE ID: ${error.message}`,
+                error.stack,
+            );
+            throw new InternalServerErrorException(
+                'Failed to retrieve vulnerability by CVE ID',
+            );
+        }
     }
 
     parseNvdResponse(nvdData) {
@@ -152,7 +214,8 @@ export class VulnerabilitiesService {
         }));
     }
 
-    async getCVEInfoFromNVD(cveId: string, vuln: any) {
+    async getCVEInfoFromNVD(vuln: any) {
+        const cveId = vuln.cveId;
         try {
             this.logger.log(`Fetching NVD data for ${cveId}...`);
             const response = await firstValueFrom(
@@ -197,7 +260,7 @@ export class VulnerabilitiesService {
             this.logger.log(`Finished processing CVE ${cveId}`);
         } catch (error) {
             this.logger.error(
-                `Error processing NVD CVE: ${error.message}`,
+                `Error processing NVD CVE ${cveId}: ${error.message}`,
                 error.stack,
             );
         }
@@ -276,6 +339,102 @@ export class VulnerabilitiesService {
         }
     }
 
+    async getVulnerabilityDetails(vulnId: string) {
+        try {
+            const vulnerabilityPipeline = [
+                {
+                    $match: {
+                        _id: new Types.ObjectId(vulnId),
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'dependencies',
+                        localField: 'dependencyId',
+                        foreignField: '_id',
+                        as: 'dependency',
+                    },
+                },
+                {
+                    $unwind: {
+                        path: '$dependency',
+                        preserveNullAndEmptyArrays: true,
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'vulnerabilityversions',
+                        localField: '_id',
+                        foreignField: 'vulnerabilityId',
+                        as: 'vulnerabilityVersions',
+                    },
+                },
+                {
+                    $unwind: {
+                        path: '$vulnerabilityVersions',
+                        preserveNullAndEmptyArrays: true,
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'dependencyversions',
+                        localField: 'vulnerabilityVersions.dependencyVersionId',
+                        foreignField: '_id',
+                        as: 'dependencyVersions',
+                    },
+                },
+                {
+                    $unwind: {
+                        path: '$dependencyVersions',
+                        preserveNullAndEmptyArrays: true,
+                    },
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        cveId: 1,
+                        published: 1,
+                        dependencyName: '$dependency.dependencyName',
+                        nvdDescription: 1,
+                        references: 1,
+                        severity: 1,
+                        'vulnerabilityVersions.status': 1,
+                        'vulnerabilityVersions.version':
+                            '$dependencyVersions.version',
+                    },
+                },
+                {
+                    $group: {
+                        _id: '$_id',
+                        cveId: { $first: '$cveId' },
+                        published: { $first: '$published' },
+                        dependencyName: { $first: '$dependencyName' },
+                        nvdDescription: { $first: '$nvdDescription' },
+                        references: { $first: '$references' },
+                        severity: { $first: '$severity' },
+                        vulnerabilityHistory: {
+                            $push: '$vulnerabilityVersions',
+                        },
+                    },
+                },
+            ];
+
+            const vulnerability = await this.vulnerabilityModel.aggregate(
+                vulnerabilityPipeline,
+            );
+
+            return vulnerability?.[0];
+        } catch (error) {
+            this.logger.error(
+                `Error getting vulnerability details: ${error.message}`,
+                error.stack,
+            );
+            throw new InternalServerErrorException(
+                'Failed to retrieve vulnerability details',
+            );
+        }
+    }
+
     async getVulnerabilitiesFromOsv(
         dependencyName: string,
         version: string,
@@ -305,37 +464,52 @@ export class VulnerabilitiesService {
             return vulnerabilities;
         } catch (error) {
             this.logger.error(
-                `Error processing OSV vulnerabilities: ${error.message}`,
+                `Error processing OSV vulnerabilities for ${dependencyName}: ${error.message}`,
                 error.stack,
             );
+            return [];
         }
     }
 
     async createVulnerability(userId: string, repoId: string) {
-        const repository = await this.repositoryService.getRepositoryByUserId(
-            userId,
-            repoId,
-        );
-
-        if (!repository) {
-            throw new NotFoundException('Repository not found.');
-        }
-
-        const dependencies =
-            await this.repositoryService.getInstalledDependenciesByRepoId(
-                repoId,
-            );
-
-        for (const dep of dependencies.data) {
-            if (dep.dependencyId) {
-                await this.getVulnerabilityInfoFromOSV(
-                    dep.dependencyId?.['dependencyName'],
-                    '', // demo version. will be replaced with actual version if needed.
-                    'npm',
+        try {
+            const repository =
+                await this.repositoryService.getRepositoryByUserId(
+                    userId,
+                    repoId,
                 );
+
+            if (!repository) {
+                throw new NotFoundException('Repository not found.');
             }
+
+            const dependencies =
+                await this.repositoryService.getInstalledDependenciesByRepoId(
+                    repoId,
+                );
+
+            for (const dep of dependencies.data) {
+                if (dep.dependencyId) {
+                    await this.getVulnerabilityInfoFromOSV(
+                        dep.dependencyId?.['dependencyName'],
+                        '', // demo version. will be replaced with actual version if needed.
+                        'npm',
+                    );
+                }
+            }
+            return dependencies;
+        } catch (error) {
+            this.logger.error(
+                `Error creating vulnerability: ${error.message}`,
+                error.stack,
+            );
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(
+                'Failed to create vulnerability',
+            );
         }
-        return dependencies;
     }
 
     async getVulnerabilityInfoFromOSV(
@@ -358,7 +532,7 @@ export class VulnerabilitiesService {
             }
 
             const vulns = this.parseOSVData(response.data);
-            if (vulns.length === 0) {
+            if (!vulns?.length) {
                 this.logger.log(
                     `No vulnerabilities found for ${dependencyName}`,
                 );
@@ -397,8 +571,8 @@ export class VulnerabilitiesService {
             await Promise.all(
                 vulns.map(async (vuln) =>
                     this.processVulnerability(
-                        dependency,
-                        dependencyVersion,
+                        dependency._id,
+                        dependencyVersion._id,
                         vuln,
                     ),
                 ),
@@ -409,122 +583,119 @@ export class VulnerabilitiesService {
             );
         } catch (error) {
             this.logger.error(
-                `Error processing OSV vulnerabilities: ${error.message}`,
+                `Error processing OSV vulnerabilities for ${dependencyName}: ${error.message}`,
                 error.stack,
             );
         }
     }
 
-    async processVulnerability(dependency, dependencyVersion, vuln) {
-        await this.vulnerabilityQueue.add(
-            'get-cve-info',
-            {
-                dependency: dependency._id,
-                dependencyVersion: dependencyVersion._id,
-                vuln,
-            },
-            {
-                delay: 20000,
-                attempts: 2,
-                backoff: {
-                    type: 'exponential',
-                    delay: 5000, // Increase delay for each retry
+    async processVulnerability(dependencyId, dependencyVersionId, vuln) {
+        try {
+            await this.vulnerabilityQueue.add(
+                'get-cve-info',
+                {
+                    vuln,
                 },
-                removeOnComplete: true,
-            },
-        );
+                {
+                    delay: 20000,
+                    attempts: 2,
+                    backoff: {
+                        type: 'exponential',
+                        delay: 5000, // Increase delay for each retry
+                    },
+                    removeOnComplete: true,
+                },
+            );
 
-        const vulnData = {
-            dependencyId: dependency._id,
-            dependencyVersion: dependencyVersion._id,
-            id: vuln.id,
-            summary: vuln.summary,
-            details: vuln.details,
-            cveId: vuln.cveId,
-            published: vuln.published,
-            cweId: vuln.cweId,
-            nvd_published_at: vuln.nvd_published_at,
-            intensity: vuln.db_severity,
-            references: vuln.references,
-        };
+            const vulnData = {
+                dependencyId,
+                dependencyVersionId,
+                id: vuln.id,
+                summary: vuln.summary,
+                details: vuln.details,
+                cveId: vuln.cveId,
+                published: vuln.published,
+                cweId: vuln.cweId,
+                nvd_published_at: vuln.nvd_published_at,
+                intensity: vuln.db_severity,
+                references: vuln.references,
+            };
 
-        const savedVuln = await this.vulnerabilityModel.findOneAndUpdate(
-            { id: vuln.id },
-            { $set: vulnData },
-            { upsert: true, new: true },
-        );
+            const savedVuln = await this.vulnerabilityModel.findOneAndUpdate(
+                { id: vuln.id },
+                { $set: vulnData },
+                { upsert: true, new: true },
+            );
 
-        await Promise.all(
-            vuln.affected.map((affected) =>
-                this.processAffectedVersions(dependency, savedVuln, affected),
-            ),
-        );
+            await Promise.all(
+                vuln.affected.map((affected) =>
+                    this.processAffectedVersions(
+                        dependencyId,
+                        savedVuln,
+                        affected,
+                    ),
+                ),
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error processing vulnerability: ${error.message}`,
+                error.stack,
+            );
+        }
     }
 
-    async processAffectedVersions(dependency, savedVuln, affected) {
-        const introducedVersion =
-            await this.dependenciesService.getVersionByDepVersion(
-                dependency._id,
-                affected.ranges.introduced,
-            );
-        const fixedVersion =
-            await this.dependenciesService.getVersionByDepVersion(
-                dependency._id,
-                affected.ranges.fixed,
-            );
+    async processAffectedVersions(dependencyId, savedVuln, affected) {
+        try {
+            const introducedVersion =
+                await this.dependenciesService.getVersionByDepVersion(
+                    dependencyId,
+                    affected.ranges.introduced,
+                );
+            const fixedVersion =
+                await this.dependenciesService.getVersionByDepVersion(
+                    dependencyId,
+                    affected.ranges.fixed,
+                );
 
-        if (introducedVersion && fixedVersion) {
-            this.logger.log(
-                `Found versions ${introducedVersion.version} to ${fixedVersion.version} for ${savedVuln.id}`,
-            );
+            if (introducedVersion && fixedVersion) {
+                this.logger.log(
+                    `Found versions ${introducedVersion.version} to ${fixedVersion.version} for ${savedVuln.id}`,
+                );
 
-            // const notFixedVersions =
-            //   await this.dependenciesService.getVersionsInPublishRange(
-            //     dependency._id,
-            //     introducedVersion.publishDate,
-            //     fixedVersion.publishDate,
-            //   );
-
-            const bulkOps = [
-                {
-                    updateOne: {
-                        filter: {
-                            dependencyId: dependency._id,
-                            vulnerability: savedVuln._id,
-                            dependencyVersion: introducedVersion._id,
-                            status: 'introduced',
+                const bulkOps = [
+                    {
+                        updateOne: {
+                            filter: {
+                                dependencyId,
+                                vulnerabilityId: savedVuln._id,
+                                dependencyVersionId: introducedVersion._id,
+                                status: 'introduced',
+                            },
+                            update: { $set: { source: affected.source } },
+                            upsert: true,
                         },
-                        update: { $set: { source: affected.source } },
-                        upsert: true,
                     },
-                },
-                // ...notFixedVersions.map((v) => ({
-                //   updateOne: {
-                //     filter: {
-                //       dependencyId: dependency._id,
-                //       vulnerability: savedVuln._id,
-                //       dependencyVersion: v._id,
-                //       status: 'not-fixed',
-                //     },
-                //     update: { $set: { source: affected.source } },
-                //     upsert: true,
-                //   },
-                // })),
-                {
-                    updateOne: {
-                        filter: {
-                            dependencyId: dependency._id,
-                            vulnerability: savedVuln._id,
-                            dependencyVersion: fixedVersion._id,
-                            status: 'fixed',
+                    {
+                        updateOne: {
+                            filter: {
+                                dependencyId,
+                                vulnerabilityId: savedVuln._id,
+                                dependencyVersionId: fixedVersion._id,
+                                status: 'fixed',
+                            },
+                            update: { $set: { source: affected.source } },
+                            upsert: true,
                         },
-                        update: { $set: { source: affected.source } },
-                        upsert: true,
                     },
-                },
-            ];
+                ];
 
-            await this.vulnerabilityVersionModel.bulkWrite(bulkOps);
+                await this.vulnerabilityVersionModel.bulkWrite(bulkOps);
+            }
+        } catch (error) {
+            this.logger.error(
+                `Error processing affected versions: ${error.message}`,
+                error.stack,
+            );
         }
     }
 }
