@@ -543,136 +543,270 @@ export class RepositoryService {
     }
 
     async scanRepo(repoId: string) {
-        if (isValidObjectId(repoId) === false) {
-            throw new BadRequestException('Invalid repository ID');
-        }
-        // Find the repository by ID and ensure it's not deleted
-        const repo = await this.RepositoryModel.findOne(
-            { _id: repoId, isDeleted: false },
-            { _id: 1, repoUrl: 1, githubApp: 1, defaultBranch: 1 },
-        )
-            .populate('githubApp')
-            .lean();
-
-        if (!repo) {
-            throw new NotFoundException(
-                `Repository not found or deleted: ${repoId}`,
-            );
-        }
-
-        await this.removeDependencyReposByRepoId(repoId);
-
-        const accessToken = await this.githubAppService.createInstallationToken(
-            repo.githubApp.installationId,
-        );
-        let response;
         try {
-            response = await firstValueFrom(
-                this.httpService.get(
-                    `${repo.repoUrl}/contents/package-lock.json`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                            Accept: 'application/vnd.github+json',
-                            'X-GitHub-Api-Version': '2022-11-28',
-                        },
-                        params: {
-                            ref: repo.defaultBranch,
-                        },
-                    },
-                ),
-            );
-        } catch (error) {
-            console.log(error);
-            throw new NotFoundException('Could not retrieve package-lock.json');
-        }
+            if (isValidObjectId(repoId) === false) {
+                throw new BadRequestException('Invalid repository ID');
+            }
 
-        let dependencyObj;
-        try {
-            const dependencyFile = response.data;
-            const dependencyFileContentDecoded = atob(dependencyFile.content);
-            dependencyObj = JSON.parse(dependencyFileContentDecoded);
-        } catch (error) {
-            console.log(error);
-            throw new NotFoundException('Could not parse package-lock.json');
-        }
+            // Find the repository by ID and ensure it's not deleted
+            const repo = await this.RepositoryModel.findOne(
+                { _id: repoId, isDeleted: false },
+                { _id: 1, repoUrl: 1, githubApp: 1, defaultBranch: 1 },
+            )
+                .populate('githubApp')
+                .lean();
 
-        const allDependencies: [string, any][] = Object.entries(
-            dependencyObj['packages'],
-        );
-
-        for (const [dependency, dependencyData] of allDependencies) {
-            if (!dependency) continue;
-
-            const packageName = this.getPackageName(dependency);
-            const packageVersion = dependencyData.version;
-
-            let installedDep =
-                await this.dependencyService.findDependencyByName(packageName);
-
-            if (!installedDep) {
-                installedDep = await this.dependencyService.create({
-                    dependencyName: packageName,
-                });
-            } else {
-                this.addVulnerability(
-                    packageName,
-                    installedDep._id.toString() as string,
-                    packageVersion,
-                    'npm',
+            if (!repo) {
+                throw new NotFoundException(
+                    `Repository not found or deleted: ${repoId}`,
                 );
             }
 
-            await this.DependencyRepositoryModel.findOneAndUpdate(
-                {
-                    dependencyId: installedDep._id,
-                    repositoryId: repo._id,
-                    installedVersion: packageVersion,
-                },
-                {
-                    $set: {
-                        isDeleted: false,
-                    },
-                },
-                {
-                    new: true,
-                    upsert: true,
-                },
-            ).lean();
+            if (!repo.githubApp) {
+                throw new BadRequestException(
+                    'GitHub app not found for repository',
+                );
+            }
 
-            if (dependencyData.dependencies) {
-                for (const [subDep, subDepVersion] of Object.entries(
-                    dependencyData.dependencies,
-                )) {
-                    await this.registerSubDependency(
-                        subDep,
-                        repo._id as string,
-                        subDepVersion as string,
-                        installedDep._id as string,
-                        'dependency',
+            try {
+                await this.removeDependencyReposByRepoId(repoId);
+            } catch (error) {
+                console.error(
+                    'Error removing dependency repos:',
+                    error.message,
+                );
+                // Continue with scan even if cleanup fails
+            }
+
+            let accessToken;
+            try {
+                accessToken =
+                    await this.githubAppService.createInstallationToken(
+                        repo.githubApp.installationId,
                     );
+            } catch (error) {
+                console.error(
+                    'Error creating installation token:',
+                    error.message,
+                );
+                throw new BadRequestException(
+                    'Failed to authenticate with GitHub',
+                );
+            }
+
+            let response;
+            try {
+                response = await firstValueFrom(
+                    this.httpService.get(
+                        `${repo.repoUrl}/contents/package-lock.json`,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${accessToken}`,
+                                Accept: 'application/vnd.github+json',
+                                'X-GitHub-Api-Version': '2022-11-28',
+                            },
+                            params: {
+                                ref: repo.defaultBranch,
+                            },
+                        },
+                    ),
+                );
+            } catch (error) {
+                console.error(
+                    'Error fetching package-lock.json:',
+                    error.message,
+                );
+                throw new NotFoundException(
+                    'Could not retrieve package-lock.json',
+                );
+            }
+
+            let dependencyObj;
+            try {
+                const dependencyFile = response.data;
+                const dependencyFileContentDecoded = atob(
+                    dependencyFile.content,
+                );
+                dependencyObj = JSON.parse(dependencyFileContentDecoded);
+            } catch (error) {
+                console.error(
+                    'Error parsing package-lock.json:',
+                    error.message,
+                );
+                throw new NotFoundException(
+                    'Could not parse package-lock.json',
+                );
+            }
+
+            if (!dependencyObj.packages) {
+                throw new BadRequestException(
+                    'Invalid package-lock.json format',
+                );
+            }
+
+            const allDependencies: [string, any][] = Object.entries(
+                dependencyObj['packages'],
+            );
+
+            let processedCount = 0;
+            let errorCount = 0;
+
+            for (const [dependency, dependencyData] of allDependencies) {
+                try {
+                    if (!dependency) continue;
+
+                    const packageName = this.getPackageName(dependency);
+                    if (!packageName) continue;
+
+                    const packageVersion = dependencyData.version;
+                    if (!packageVersion) continue;
+
+                    let installedDep;
+                    try {
+                        installedDep =
+                            await this.dependencyService.findDependencyByName(
+                                packageName,
+                            );
+                    } catch (error) {
+                        console.error(
+                            `Error finding dependency ${packageName}:`,
+                            error.message,
+                        );
+                        continue;
+                    }
+
+                    if (!installedDep) {
+                        try {
+                            installedDep = await this.dependencyService.create({
+                                dependencyName: packageName,
+                            });
+                        } catch (error) {
+                            console.error(
+                                `Error creating dependency ${packageName}:`,
+                                error.message,
+                            );
+                            continue;
+                        }
+                    } else {
+                        try {
+                            await this.addVulnerability(
+                                packageName,
+                                installedDep._id.toString() as string,
+                                packageVersion,
+                                'npm',
+                            );
+                        } catch (error) {
+                            console.error(
+                                `Error adding vulnerability for ${packageName}:`,
+                                error.message,
+                            );
+                            // Continue processing even if vulnerability check fails
+                        }
+                    }
+
+                    try {
+                        await this.DependencyRepositoryModel.findOneAndUpdate(
+                            {
+                                dependencyId: installedDep._id,
+                                repositoryId: repo._id,
+                                installedVersion: packageVersion,
+                            },
+                            {
+                                $set: {
+                                    isDeleted: false,
+                                },
+                            },
+                            {
+                                new: true,
+                                upsert: true,
+                            },
+                        ).lean();
+                    } catch (error) {
+                        console.error(
+                            `Error updating dependency repository for ${packageName}:`,
+                            error.message,
+                        );
+                        continue;
+                    }
+
+                    // Process sub-dependencies
+                    if (dependencyData.dependencies) {
+                        for (const [subDep, subDepVersion] of Object.entries(
+                            dependencyData.dependencies,
+                        )) {
+                            try {
+                                await this.registerSubDependency(
+                                    subDep,
+                                    repo._id as string,
+                                    subDepVersion as string,
+                                    installedDep._id as string,
+                                    'dependency',
+                                );
+                            } catch (error) {
+                                console.error(
+                                    `Error registering sub-dependency ${subDep}:`,
+                                    error.message,
+                                );
+                                // Continue with other sub-dependencies
+                            }
+                        }
+                    }
+
+                    if (dependencyData.peerDependencies) {
+                        for (const [subDep, subDepVersion] of Object.entries(
+                            dependencyData.peerDependencies,
+                        )) {
+                            try {
+                                await this.registerSubDependency(
+                                    subDep,
+                                    repo._id as string,
+                                    subDepVersion as string,
+                                    installedDep._id as string,
+                                    'peerDependency',
+                                );
+                            } catch (error) {
+                                console.error(
+                                    `Error registering peer dependency ${subDep}:`,
+                                    error.message,
+                                );
+                                // Continue with other peer dependencies
+                            }
+                        }
+                    }
+
+                    processedCount++;
+                } catch (error) {
+                    console.error(
+                        `Error processing dependency ${dependency}:`,
+                        error.message,
+                    );
+                    errorCount++;
+                    continue;
                 }
             }
 
-            if (dependencyData.peerDependencies) {
-                for (const [subDep, subDepVersion] of Object.entries(
-                    dependencyData.peerDependencies,
-                )) {
-                    await this.registerSubDependency(
-                        subDep,
-                        repo._id as string,
-                        subDepVersion as string,
-                        installedDep._id as string,
-                        'peerDependency',
-                    );
-                }
+            console.log(
+                `Scan completed: ${processedCount} dependencies processed, ${errorCount} errors`,
+            );
+
+            return {
+                message:
+                    'Dependencies scanned successfully. It will take some time to process',
+                processedCount,
+                errorCount,
+            };
+        } catch (error) {
+            console.error('Error in scanRepo:', error.message);
+            if (
+                error instanceof BadRequestException ||
+                error instanceof NotFoundException
+            ) {
+                throw error;
             }
+            throw new BadRequestException(
+                `Failed to scan repository: ${error.message}`,
+            );
         }
-
-        return {
-            message:
-                'Dependencies scanned successfully. It will take some time to process',
-        };
     }
 
     async shareRepository(repoId: string, userId: string, sharedWith: string) {
@@ -899,30 +1033,53 @@ export class RepositoryService {
         version: string,
         ecosystem: string = 'npm',
     ) {
-        console.log(dependencyName, dependencyId, version);
-        const dependencyVersion =
-            await this.dependencyService.getVersionByDepVersion(
-                dependencyId,
-                version,
+        try {
+            console.log(dependencyName, dependencyId, version);
+
+            if (!dependencyName || !dependencyId || !version) {
+                console.error(
+                    'Missing required parameters for vulnerability check',
+                );
+                return;
+            }
+
+            const dependencyVersion =
+                await this.dependencyService.getVersionByDepVersion(
+                    dependencyId,
+                    version,
+                );
+
+            if (!dependencyVersion) {
+                console.log('Dependency version not found');
+                return;
+            }
+
+            const vulnerability =
+                await this.vulnerabilityService.getVulnerabilityByDependencyId(
+                    dependencyId.toString(),
+                    dependencyVersion._id.toString() as string,
+                );
+
+            if (!vulnerability) {
+                try {
+                    await this.vulnerabilityService.create({
+                        dependencyName,
+                        ecosystem,
+                        version,
+                    });
+                } catch (error) {
+                    console.error(
+                        `Error creating vulnerability for ${dependencyName}:`,
+                        error.message,
+                    );
+                }
+            }
+        } catch (error) {
+            console.error(
+                `Error in addVulnerability for ${dependencyName}:`,
+                error.message,
             );
-
-        if (!dependencyVersion) {
-            console.log('Dependency version not found');
-            return;
-        }
-
-        const vulnerability =
-            await this.vulnerabilityService.getVulnerabilityByDependencyId(
-                dependencyId.toString(),
-                dependencyVersion._id.toString() as string,
-            );
-
-        if (!vulnerability) {
-            this.vulnerabilityService.create({
-                dependencyName,
-                ecosystem,
-                version,
-            });
+            // Don't throw error to avoid breaking the main scan process
         }
     }
 
@@ -952,10 +1109,25 @@ export class RepositoryService {
     }
 
     async removeDependencyReposByRepoId(repoId: string) {
-        await this.DependencyRepositoryModel.updateMany(
-            { repositoryId: new Types.ObjectId(repoId) },
-            { $set: { isDeleted: true } },
-        );
+        try {
+            if (!repoId || !isValidObjectId(repoId)) {
+                console.error(
+                    'Invalid repository ID for removing dependency repos',
+                );
+                return;
+            }
+
+            await this.DependencyRepositoryModel.updateMany(
+                { repositoryId: new Types.ObjectId(repoId) },
+                { $set: { isDeleted: true } },
+            );
+        } catch (error) {
+            console.error(
+                `Error removing dependency repos for repository ${repoId}:`,
+                error.message,
+            );
+            throw error; // Re-throw to allow caller to handle
+        }
     }
 
     async addDependencyReposByRepoId(repoId: string) {
@@ -1111,31 +1283,76 @@ export class RepositoryService {
         parentDependencyId: string,
         dependencyType: string,
     ) {
-        let installedSubDep =
-            await this.dependencyService.findDependencyByName(subDep);
+        try {
+            if (
+                !subDep ||
+                !repoId ||
+                !subDepVersion ||
+                !parentDependencyId ||
+                !dependencyType
+            ) {
+                console.error(
+                    'Missing required parameters for sub-dependency registration',
+                );
+                return;
+            }
 
-        if (!installedSubDep) {
-            installedSubDep = await this.dependencyService.create({
-                dependencyName: subDep,
-            });
+            let installedSubDep;
+            try {
+                installedSubDep =
+                    await this.dependencyService.findDependencyByName(subDep);
+            } catch (error) {
+                console.error(
+                    `Error finding sub-dependency ${subDep}:`,
+                    error.message,
+                );
+                return;
+            }
+
+            if (!installedSubDep) {
+                try {
+                    installedSubDep = await this.dependencyService.create({
+                        dependencyName: subDep,
+                    });
+                } catch (error) {
+                    console.error(
+                        `Error creating sub-dependency ${subDep}:`,
+                        error.message,
+                    );
+                    return;
+                }
+            }
+
+            try {
+                await this.DependencyRepositoryModel.findOneAndUpdate(
+                    {
+                        dependencyId: installedSubDep._id,
+                        repositoryId: new Types.ObjectId(repoId),
+                        requiredVersion: subDepVersion,
+                        parent: new Types.ObjectId(parentDependencyId),
+                        dependencyType: dependencyType,
+                    },
+                    {
+                        $set: { isDeleted: false },
+                    },
+                    {
+                        upsert: true,
+                        new: true,
+                    },
+                ).lean();
+            } catch (error) {
+                console.error(
+                    `Error updating sub-dependency repository for ${subDep}:`,
+                    error.message,
+                );
+            }
+        } catch (error) {
+            console.error(
+                `Error in registerSubDependency for ${subDep}:`,
+                error.message,
+            );
+            // Don't throw error to avoid breaking the main scan process
         }
-
-        await this.DependencyRepositoryModel.findOneAndUpdate(
-            {
-                dependencyId: installedSubDep._id, // new Types.ObjectId(installedSubDep._id as string),
-                repositoryId: new Types.ObjectId(repoId),
-                requiredVersion: subDepVersion,
-                parent: new Types.ObjectId(parentDependencyId),
-                dependencyType: dependencyType,
-            },
-            {
-                $set: { isDeleted: false },
-            },
-            {
-                upsert: true,
-                new: true,
-            },
-        ).lean();
     }
 
     async selectedRepos(query: GetRepositoryDto, userId: string) {
