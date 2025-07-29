@@ -84,7 +84,7 @@ export class EmailService {
             from: `6sense Projects ${this.configService.get('EMAIL_SENDER')}`,
             to: emailAddress,
             subject: `You have been invited to a repository`,
-            html: emailTemplate, //updated for gmail
+            html: emailTemplate,
         });
         return response;
     }
