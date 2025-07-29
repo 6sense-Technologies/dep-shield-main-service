@@ -601,7 +601,7 @@ export class VulnerabilitiesService {
                     attempts: 2,
                     backoff: {
                         type: 'exponential',
-                        delay: 5000, // Increase delay for each retry
+                        delay: 5000,
                     },
                     removeOnComplete: true,
                 },
