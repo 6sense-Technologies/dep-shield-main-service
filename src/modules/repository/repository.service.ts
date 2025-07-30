@@ -1552,12 +1552,13 @@ export class RepositoryService {
         repoId: string,
         page: number,
         limit: number,
+        search?: string,
     ) {
         let repoIds = [];
 
         repoIds = await this.getRepoIds(repoId, userId);
 
-        const pipeline = [
+        const pipeline: any[] = [
             {
                 $match: {
                     repositoryId: {
@@ -1628,6 +1629,21 @@ export class RepositoryService {
                     license: 1,
                 },
             },
+        ];
+
+        // Add search filter if search parameter is provided
+        if (search && search.trim()) {
+            pipeline.push({
+                $match: {
+                    name: {
+                        $regex: search.trim(),
+                        $options: 'i', // Case-insensitive search
+                    },
+                },
+            });
+        }
+
+        pipeline.push(
             {
                 $sort: { name: 1 },
             },
@@ -1637,7 +1653,7 @@ export class RepositoryService {
                     data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
                 },
             },
-        ];
+        );
 
         return await this.DependencyRepositoryModel.aggregate(pipeline as any);
     }
