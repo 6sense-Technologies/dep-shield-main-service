@@ -39,12 +39,14 @@ export class DependenciesController {
         @Query('page') page: string,
         @Query('limit') limit: string,
         @Req() req: Request,
+        @Query('search') search?: string,
     ) {
         return this.dependenciesService.getDependenciesWithVulnerabilityCount(
             req['user'].userId,
             repoId,
             +page,
             +limit,
+            search,
         );
     }
 }
