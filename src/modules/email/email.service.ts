@@ -51,6 +51,7 @@ export class EmailService {
         const user = await this.userModel.findOne({
             emailAddress: emailAddress,
         });
+        console.log(user);
         if (!user) {
             throw new NotFoundException('User not found');
         }
@@ -68,6 +69,7 @@ export class EmailService {
             subject: `Please Verify your account for ${emailAddress}`,
             html: emailTemplate, //updated for gmail
         });
+        console.log(response);
         return response;
     }
 
