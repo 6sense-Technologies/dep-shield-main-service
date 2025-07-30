@@ -87,6 +87,7 @@ export class DependenciesService {
         repoId: string,
         page: number,
         limit: number,
+        search?: string,
     ) {
         if (!page || !limit) {
             throw new BadRequestException('Page and limit are required');
@@ -98,6 +99,7 @@ export class DependenciesService {
                 repoId,
                 page,
                 limit,
+                search,
             );
 
         const data = result[0].data;
