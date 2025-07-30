@@ -62,12 +62,6 @@ export class EmailService {
             if (user.isVerified === true) {
                 throw new BadRequestException('User is already verified');
             }
-            const code = await this.generateAndStoreCode(emailAddress);
-            const emailTemplate =
-                EmailTemplate.userVerificationOTPEmailTemplate(
-                    user.displayName,
-                    code,
-                );
 
             // Log SMTP configuration for debugging
             this.logger.log(`Attempting to send email to: ${emailAddress}`);
@@ -78,6 +72,15 @@ export class EmailService {
                 `SMTP Port: ${this.configService.get('EMAIL_SERVICE_PORT')}`,
             );
 
+            const code = await this.generateAndStoreCode(emailAddress);
+            const emailTemplate =
+                EmailTemplate.userVerificationOTPEmailTemplate(
+                    user.displayName,
+                    code,
+                );
+
+            this.logger.log(`code: ${code}`);
+            console.log('code', code);
             const response = await this.mailerService.sendMail({
                 from: `6sense Projects ${this.configService.get('EMAIL_SENDER')}`,
                 to: emailAddress,
