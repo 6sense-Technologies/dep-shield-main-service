@@ -2,6 +2,7 @@ import { MailerService } from '@nestjs-modules/mailer';
 import {
     BadRequestException,
     Injectable,
+    Logger,
     NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -13,6 +14,7 @@ import { EmailTemplate } from './templates/otp-email.template';
 
 @Injectable()
 export class EmailService {
+    private readonly logger = new Logger(EmailService.name);
     constructor(
         private configService: ConfigService,
         @InjectModel(OTPSecret.name)
@@ -48,30 +50,65 @@ export class EmailService {
     }
     // Function to send the email with the 6-digit code
     public async sendEmail(emailAddress: string) {
-        console.log('emailAddress', emailAddress);
-        const user = await this.userModel.findOne({
-            emailAddress: emailAddress,
-        });
-        console.log(user);
-        if (!user) {
-            throw new NotFoundException('User not found');
+        try {
+            console.log('emailAddress', emailAddress);
+            const user = await this.userModel.findOne({
+                emailAddress: emailAddress,
+            });
+            console.log(user);
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+            if (user.isVerified === true) {
+                throw new BadRequestException('User is already verified');
+            }
+            const code = await this.generateAndStoreCode(emailAddress);
+            const emailTemplate =
+                EmailTemplate.userVerificationOTPEmailTemplate(
+                    user.displayName,
+                    code,
+                );
+
+            // Log SMTP configuration for debugging
+            this.logger.log(`Attempting to send email to: ${emailAddress}`);
+            this.logger.log(
+                `SMTP Host: ${this.configService.get('EMAIL_HOST')}`,
+            );
+            this.logger.log(
+                `SMTP Port: ${this.configService.get('EMAIL_SERVICE_PORT')}`,
+            );
+
+            const response = await this.mailerService.sendMail({
+                from: `6sense Projects ${this.configService.get('EMAIL_SENDER')}`,
+                to: emailAddress,
+                subject: `Please Verify your account for ${emailAddress}`,
+                html: emailTemplate,
+            });
+            console.log(response);
+            return response;
+        } catch (error) {
+            this.logger.error(
+                `Failed to send email to ${emailAddress}:`,
+                error,
+            );
+
+            // Provide more specific error messages
+            if (error.code === 'ETIMEDOUT') {
+                throw new Error(
+                    `SMTP connection timeout. Please check your email configuration and network connectivity.`,
+                );
+            } else if (error.code === 'ECONNREFUSED') {
+                throw new Error(
+                    `SMTP connection refused. Please verify the email host and port settings.`,
+                );
+            } else if (error.code === 'EAUTH') {
+                throw new Error(
+                    `SMTP authentication failed. Please check your email username and password.`,
+                );
+            }
+
+            throw error;
         }
-        if (user.isVerified === true) {
-            throw new BadRequestException('User is already verified');
-        }
-        const code = await this.generateAndStoreCode(emailAddress);
-        const emailTemplate = EmailTemplate.userVerificationOTPEmailTemplate(
-            user.displayName,
-            code,
-        );
-        const response = await this.mailerService.sendMail({
-            from: `6sense Projects ${this.configService.get('EMAIL_SENDER')}`,
-            to: emailAddress,
-            subject: `Please Verify your account for ${emailAddress}`,
-            html: emailTemplate, //updated for gmail
-        });
-        console.log(response);
-        return response;
     }
 
     async sendRepositoryShareEmail(
