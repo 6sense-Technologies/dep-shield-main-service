@@ -48,6 +48,7 @@ export class EmailService {
     }
     // Function to send the email with the 6-digit code
     public async sendEmail(emailAddress: string) {
+        console.log('emailAddress', emailAddress);
         const user = await this.userModel.findOne({
             emailAddress: emailAddress,
         });
