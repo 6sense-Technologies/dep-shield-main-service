@@ -56,6 +56,7 @@ export class VulnerabilitiesController {
             query.repoId,
             +query.page,
             +query.limit,
+            query.search,
         );
     }
 
