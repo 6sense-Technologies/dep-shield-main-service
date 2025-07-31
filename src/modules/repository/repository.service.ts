@@ -1882,6 +1882,7 @@ export class RepositoryService {
         return await this.DependencyRepositoryModel.aggregate(pipeline as any);
     }
 
+    // this function is used to get the repo ids for the user
     private async getRepoIds(repoId: string, userId: string) {
         let repoIds: Types.ObjectId[] = [];
         if (repoId) {
