@@ -12,4 +12,6 @@ export class GetRepositoryDto {
     license?: string;
     @IsOptional()
     vulnerabilityId?: string;
+    @IsOptional()
+    search?: string;
 }

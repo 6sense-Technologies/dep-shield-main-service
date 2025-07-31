@@ -334,6 +334,17 @@ export class RepositoryService {
             );
         }
 
+        if (query.search) {
+            pipeline.push({
+                $match: {
+                    repoName: {
+                        $regex: query.search.trim(),
+                        $options: 'i', // Case-insensitive search
+                    },
+                },
+            });
+        }
+
         pipeline.push({
             $facet: {
                 repositories: [
@@ -1673,6 +1684,7 @@ export class RepositoryService {
         repoId: string,
         page: number,
         limit: number,
+        search?: string,
     ) {
         let repoIds = [];
         repoIds = await this.getRepoIds(repoId, userId);
@@ -1755,6 +1767,19 @@ export class RepositoryService {
                     _id: '$vulnerabilityId',
                 },
             },
+            // Add search filter if search parameter is provided
+            ...(search && search.trim()
+                ? [
+                      {
+                          $match: {
+                              name: {
+                                  $regex: search.trim(),
+                                  $options: 'i', // Case-insensitive search
+                              },
+                          },
+                      },
+                  ]
+                : []),
             {
                 $sort: {
                     name: 1,
