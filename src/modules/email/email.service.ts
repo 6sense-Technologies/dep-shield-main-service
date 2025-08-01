@@ -51,11 +51,11 @@ export class EmailService {
     // Function to send the email with the 6-digit code
     public async sendEmail(emailAddress: string) {
         try {
-            console.log('emailAddress', emailAddress);
+            // console.log('emailAddress', emailAddress);
             const user = await this.userModel.findOne({
                 emailAddress: emailAddress,
             });
-            console.log(user);
+            // console.log(user);
             if (!user) {
                 throw new NotFoundException('User not found');
             }
@@ -80,15 +80,15 @@ export class EmailService {
                 );
 
             this.logger.log(`code: ${code}`);
-            console.log('code', code);
+            // console.log('code', code);
             const response = await this.mailerService.sendMail({
                 from: `6sense Projects ${this.configService.get('EMAIL_SENDER')}`,
                 to: emailAddress,
                 subject: `Please Verify your account for ${emailAddress}`,
                 html: emailTemplate,
             });
-            console.log(response);
-            return response;
+
+            return { response, code }; // Warning: sending the code for now as email is not sending
         } catch (error) {
             this.logger.error(
                 `Failed to send email to ${emailAddress}:`,
