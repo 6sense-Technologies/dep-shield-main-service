@@ -30,10 +30,6 @@ import { EmailService } from './email.service';
                         user: configService.get<string>('EMAIL_USERNAME'),
                         pass: configService.get<string>('EMAIL_PASSWORD'),
                     },
-                    // Add connection timeout settings
-                    connectionTimeout: 60000, // 60 seconds
-                    greetingTimeout: 30000, // 30 seconds
-                    socketTimeout: 60000, // 60 seconds
                 },
                 defaults: {
                     from: `"No Reply" <${configService.get<string>('EMAIL_SENDER')}>`, // Default sender
